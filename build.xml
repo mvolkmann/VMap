@@ -1,0 +1,90 @@
+<project name="VMap" default="test">
+
+  <property name="test" value="*"/>
+
+  <path id="classpath">
+    <pathelement location="build/classes"/>
+    <fileset dir="lib"/>
+  </path>
+
+  <target name="clean" depends="clean.test"
+    description="deletes all generated files">
+    <delete dir="build"/>
+    <delete dir="doc/api"/>
+    <delete dir="test"/>
+  </target>
+
+  <target name="clean.test" description="deletes all generated files">
+    <delete dir="test"/>
+  </target>
+
+  <target name="compile" depends="init"
+    description="compiles source files">
+    <javac srcdir="src" destdir="build/classes"
+      classpathref="classpath" deprecation="on" debug="on"
+      includeantruntime="false"/>
+  </target>
+
+  <target name="javadoc" depends="compile"
+    description="generates javadoc from all .java files">
+    <delete dir="doc/api"/>
+    <mkdir dir="doc/api"/>
+    <javadoc sourcepath="src" destdir="doc/api"
+      classpathref="classpath"/>
+  </target>
+
+  <target name="init">
+    <mkdir dir="build/classes"/>
+  </target>
+
+  <target name="profile" depends="compile" description="profiles the project">
+    <fail unless="netbeans.home">This target can only run inside the NetBeans IDE.</fail>
+
+    <nbprofiledirect>
+      <classpath>
+        <pathelement location="build/classes"/>
+      </classpath>
+    </nbprofiledirect>
+
+    <java classname="com.ociweb.util.Profile" classpathref="classpath"
+      fork="yes">
+      <jvmarg value="${profiler.info.jvmargs.agent}"/>
+    </java>
+  </target>
+
+  <target name="test" depends="clean.test, compile"
+   description="runs all JUnit tests">
+    <mkdir dir="test"/>
+    <junit fork="yes" printsummary="yes">
+      <classpath refid="classpath"/>
+      <batchtest todir="test">
+        <fileset dir="src" includes="**/${test}Test.java"/>
+      </batchtest>
+      <formatter type="xml"/>
+    </junit>
+    <junitreport toDir="test">
+      <fileset dir="test"/>
+      <report format="frames" todir="test"/>
+    </junitreport>
+    <!--
+      <exec os="..."> uses the Java "os.name" system property.
+      Under Cygwin running on Windows XP, this is "Windows XP".
+    -->
+    <exec os="Darwin" executable="open">
+      <arg line="-a /Applications/Safari.app test/index.html"/>
+    </exec>
+    <exec os="Mac OS X" executable="open">
+      <arg line="-a /Applications/Safari.app test/index.html"/>
+    </exec>
+    <exec os="Windows" executable="cmd.exe">
+      <arg line="/c start test/index.html"/>
+    </exec>
+  </target>
+
+  <target name="zip" depends="clean"
+    description="creates a zip file containing all the files in this project">
+    <zip destfile="../${ant.project.name}.zip"
+      basedir=".." includes="${ant.project.name}/**"/>
+  </target>
+
+</project>
