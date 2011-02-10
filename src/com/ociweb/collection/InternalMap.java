@@ -104,9 +104,9 @@ class InternalMap<K, V> {
         return null;
     }
 
-    VMapEntry<K, V> getFirstEntry() { return getNextEntry(0); }
+    private VMapEntry<K, V> getFirstEntry() { return getNextEntry(0); }
 
-    VMapEntry<K, V> getNextEntry(VMapEntry<K, V> prev) {
+    private VMapEntry<K, V> getNextEntry(VMapEntry<K, V> prev) {
         VMapEntry<K, V> next = prev.next;
         if (next != null) return next;
 
@@ -114,7 +114,7 @@ class InternalMap<K, V> {
         return getNextEntry(bucketIndex + 1);
     }
 
-    VMapEntry<K, V> getNextEntry(int bucketIndex) {
+    private VMapEntry<K, V> getNextEntry(int bucketIndex) {
         while (bucketIndex < buckets.length) {
             VMapEntry<K, V> next = buckets[bucketIndex];
             if (next != null) return next;
@@ -217,7 +217,7 @@ class InternalMap<K, V> {
         return "InternalMap with " + size + " entries";
     }
 
-    class MyIterator<K, V> implements Iterator<VMapEntry> {
+    static class MyIterator<K, V> implements Iterator<VMapEntry> {
 
         InternalMap<K,V> map;
         VMapEntry<K, V> nextEntry;
@@ -226,7 +226,7 @@ class InternalMap<K, V> {
         MyIterator(InternalMap<K,V> map) { this.map = map; }
 
         @Override
-        public boolean hasNext() { return seenCount < size; }
+        public boolean hasNext() { return seenCount < map.size; }
 
         @Override
         public VMapEntry<K, V> next() {
