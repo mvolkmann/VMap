@@ -1,5 +1,6 @@
 package com.ociweb.collection;
 
+import java.lang.reflect.Array;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Arrays;
@@ -14,25 +15,29 @@ public class VHashMapTest {
 
     private void log(Object obj) { System.out.println(obj); }
 
-    private Tuple[] makeTuples() {
-        return new Tuple[] {
-            new Tuple("foo", 1),
-            new Tuple("bar", 2),
-            new Tuple("baz", 3)
-        };
+    private Pair<String, Integer>[] makePairs() {
+        //return new Pair<String, Integer>[] {
+        @SuppressWarnings("unchecked")
+        Pair<String, Integer>[] pairs = (Pair<String, Integer>[])
+            Array.newInstance(Pair.class, 3);
+        pairs[0] = new Pair<String, Integer>("foo", 1);
+        pairs[1] = new Pair<String, Integer>("bar", 2);
+        pairs[2] = new Pair<String, Integer>("baz", 3);
+
+        return pairs;
     }
 
     @Test
     public void testClear() {
-        VMap map0 = new VHashMap(makeTuples());
+        VMap<String, Integer> map0 = new VHashMap<String, Integer>(makePairs());
         assertEquals(3, map0.size());
-        VMap map1 = map0.clear();
+        VMap<String, Integer> map1 = map0.clear();
         assertEquals(0, map1.size());
     }
 
     @Test
     public void testContains() {
-        VMap map = new VHashMap(makeTuples());
+        VMap<String, Integer> map = new VHashMap<String, Integer>(makePairs());
         assertTrue(map.containsKey("foo"));
         assertTrue(map.containsKey("bar"));
         assertTrue(map.containsKey("baz"));
@@ -41,15 +46,15 @@ public class VHashMapTest {
 
     @Test
     public void testDelete() {
-        VMap map0 = new VHashMap();
+        VMap<String, String> map0 = new VHashMap<String, String>();
 
         // It shouldn't be an error to try to delete a non-existent key.
         map0.delete("foo");
 
-        VMap map1 = map0.put("foo", "bar");
+        VMap<String, String> map1 = map0.put("foo", "bar");
         assertTrue(map1.getVersion() == map0.getVersion() + 1);
 
-        VMap map2 = map1.delete("foo");
+        VMap<String, String> map2 = map1.delete("foo");
         assertTrue(map2.getVersion() == map1.getVersion() + 1);
 
         assertNull(map0.get("foo"));
@@ -61,9 +66,9 @@ public class VHashMapTest {
     public void testKeyIterator() {
         // Using a Java Set just for testing.
         String[] keys = new String[] { "foo", "bar", "baz" };
-        Set keySet = new HashSet(Arrays.asList(keys));
+        Set<String> keySet = new HashSet<String>(Arrays.asList(keys));
 
-        VMap map = new VHashMap(makeTuples());
+        VMap<String, Integer> map = new VHashMap<String, Integer>(makePairs());
         Iterator iter = map.keyIterator();
         while (!keySet.isEmpty()) {
             assertTrue(iter.hasNext());
@@ -83,7 +88,7 @@ public class VHashMapTest {
         // Test standard Java map.
         //---------------------------------------------------------------------
         long startTime = System.currentTimeMillis();
-        Map mMap = new HashMap();
+        Map<String, String> mMap = new HashMap<String, String>();
         String prevWord = firstKey;
         for (String word : words) {
             mMap.put(prevWord, word);
@@ -100,34 +105,34 @@ public class VHashMapTest {
         // Test immutable map.
         //---------------------------------------------------------------------
         startTime = System.currentTimeMillis();
-        VMap iMap = new VHashMap();
+        VMap<String, String> vMap = new VHashMap<String, String>();
         prevWord = firstKey;
         for (String word : words) {
-            iMap = iMap.put(prevWord, word);
+            vMap = vMap.put(prevWord, word);
             prevWord = word;
         }
-        //iMap.dump();
+        //vMap.dump();
         prevWord = firstKey;
         for (String word : words) {
-            assertEquals(word, iMap.get(prevWord));
+            assertEquals(word, vMap.get(prevWord));
             prevWord = word;
         }
-        long iMapElapsed = System.currentTimeMillis() - startTime;
+        long vMapElapsed = System.currentTimeMillis() - startTime;
 
         //---------------------------------------------------------------------
         // Compare their performance.
         //---------------------------------------------------------------------
         String msg =
-            "immutable map performance (" + iMapElapsed + ") < " +
+            "immutable map performance (" + vMapElapsed + ") < " +
             "triple mutable map performance (" + mMapElapsed + ')';
         log(msg);
-        assertTrue(msg, iMapElapsed < 3*mMapElapsed);
+        assertTrue(msg, vMapElapsed < 3*mMapElapsed);
     }
 
     @Test
     public void testPutSingle() {
-        VMap map0 = new VHashMap();
-        VMap map1 = map0.put("foo", "bar");
+        VMap<String, String> map0 = new VHashMap<String, String>();
+        VMap<String, String> map1 = map0.put("foo", "bar");
         assertTrue(map1.getVersion() == map0.getVersion() + 1);
 
         assertNull(map0.get("foo"));
@@ -136,46 +141,46 @@ public class VHashMapTest {
 
     @Test
     public void testPutMultiple() {
-        VMap map0 = new VHashMap();
-        VMap map1 = map0.put(makeTuples());
+        VMap<String, Integer> map0 = new VHashMap<String, Integer>();
+        VMap<String, Integer> map1 = map0.put(makePairs());
         assertEquals(3, map1.size());
-        assertEquals(1, map1.get("foo"));
-        assertEquals(2, map1.get("bar"));
-        assertEquals(3, map1.get("baz"));
+        assertEquals(1, (int) map1.get("foo"));
+        assertEquals(2, (int) map1.get("bar"));
+        assertEquals(3, (int) map1.get("baz"));
     }
 
     @Test
     public void testPutRepeat() {
-        VMap map0 = new VHashMap();
-        VMap map1 = map0.put("foo", 1);
-        VMap map2 = map1.put("bar", 2);
-        VMap map3 = map2.delete("foo");
-        VMap map4 = map3.put("bar", 3);
-        VMap map5 = map4.put("foo", 4);
+        VMap<String, Integer> map0 = new VHashMap<String, Integer>();
+        VMap<String, Integer> map1 = map0.put("foo", 1);
+        VMap<String, Integer> map2 = map1.put("bar", 2);
+        VMap<String, Integer> map3 = map2.delete("foo");
+        VMap<String, Integer> map4 = map3.put("bar", 3);
+        VMap<String, Integer> map5 = map4.put("foo", 4);
 
         assertTrue(!map0.containsKey("foo"));
         assertTrue(!map0.containsKey("bar"));
 
-        assertEquals(1, map1.get("foo"));
+        assertEquals(1, (int) map1.get("foo"));
         assertTrue(!map1.containsKey("bar"));
 
-        assertEquals(1, map2.get("foo"));
-        assertEquals(2, map2.get("bar"));
+        assertEquals(1, (int) map2.get("foo"));
+        assertEquals(2, (int) map2.get("bar"));
 
         assertTrue(!map3.containsKey("foo"));
-        assertEquals(2, map3.get("bar"));
+        assertEquals(2, (int) map3.get("bar"));
 
         assertTrue(!map4.containsKey("foo"));
-        assertEquals(3, map4.get("bar"));
+        assertEquals(3, (int) map4.get("bar"));
 
-        assertEquals(4, map5.get("foo"));
-        assertEquals(3, map5.get("bar"));
+        assertEquals(4, (int) map5.get("foo"));
+        assertEquals(3, (int) map5.get("bar"));
 
     }
 
     @Test
     public void testSize() {
-        VMap map = new VHashMap(makeTuples());
+        VMap<String, Integer> map = new VHashMap<String, Integer>(makePairs());
         assertEquals(3, map.size());
     }
 
@@ -183,16 +188,15 @@ public class VHashMapTest {
     public void testValueIterator() {
         // Using a Java Set just for testing.
         Integer[] values = new Integer[] { 1, 2, 3 };
-        Set valueSet = new HashSet(Arrays.asList(values));
+        Set<Integer> valueSet = new HashSet<Integer>(Arrays.asList(values));
 
-        VMap map = new VHashMap(makeTuples());
-        Iterator iter = map.valueIterator();
+        VMap<String, Integer> map = new VHashMap<String, Integer>(makePairs());
+        Iterator<Integer> iter = map.valueIterator();
         while (!valueSet.isEmpty()) {
             assertTrue(iter.hasNext());
-            Object value = iter.next();
+            Integer value = iter.next();
             assertTrue(valueSet.contains(value));
             valueSet.remove(value);
         }
     }
-
 }

@@ -2,21 +2,21 @@ package com.ociweb.collection;
 
 import java.util.Iterator;
 
-public interface VSet {
+public interface VSet<K> {
 
-    VSet add(Object... values);
+    VSet<K> add(K... values);
 
-    VSet clear();
+    VSet<K> clear();
 
-    boolean contains(Object value);
+    boolean contains(K value);
 
-    VSet delete(Object... values);
+    VSet<K> delete(K... values);
 
     void dump();
 
     long getVersion();
 
-    Iterator<Object> iterator();
+    Iterator<K> iterator();
 
     int size();
 }

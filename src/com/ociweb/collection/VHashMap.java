@@ -3,34 +3,34 @@ package com.ociweb.collection;
 import java.util.BitSet;
 import java.util.Iterator;
 
-public class VHashMap implements VMap {
+public class VHashMap<K, V> implements VMap<K, V> {
 
     private BitSet versionSet;
-    private InternalMap map;
+    private InternalMap<K, V> map;
     private int version;
 
     public VHashMap() {}
 
-    public VHashMap(Tuple... tuples) {
-        map = new InternalMap(tuples.length);
-        map.put(version, tuples);
+    public VHashMap(Pair<K, V>... pairs) {
+        map = new InternalMap<K, V>(pairs.length);
+        map.put(version, pairs);
         versionSet = new BitSet(1);
         versionSet.set(version); // zero
     }
 
     @Override
-    public VMap clear() {
-        return new VHashMap();
+    public VMap<K, V> clear() {
+        return new VHashMap<K, V>();
     }
 
     @Override
-    public boolean containsKey(Object key) {
+    public boolean containsKey(K key) {
         return map == null ? false : map.contains(versionSet, key);
     }
 
-    private synchronized VHashMap copy() {
-        VHashMap sim = new VHashMap();
-        sim.map = map == null ? new InternalMap() : map;
+    private synchronized VHashMap<K, V> copy() {
+        VHashMap<K, V> sim = new VHashMap<K, V>();
+        sim.map = map == null ? new InternalMap<K, V>() : map;
         sim.version = version + 1;
         sim.versionSet = new BitSet(sim.version);
         if (versionSet != null) sim.versionSet.or(versionSet);
@@ -39,8 +39,8 @@ public class VHashMap implements VMap {
     }
 
     @Override
-    public VMap delete(Object... keys) {
-        VHashMap sim = copy();
+    public VMap<K, V> delete(K... keys) {
+        VHashMap<K, V> sim = copy();
         sim.map.delete(sim.version, keys);
         return sim;
     }
@@ -63,7 +63,7 @@ public class VHashMap implements VMap {
     }
 
     @Override
-    public Object get(Object key) {
+    public V get(K key) {
         return map == null ? null : map.get(versionSet, key);
     }
 
@@ -77,21 +77,21 @@ public class VHashMap implements VMap {
     }
 
     @Override
-    public Iterator<Object> keyIterator() {
-        return new SimpleImmutableMapIterator(true);
+    public Iterator<K> keyIterator() {
+        return new KeyIterator<K>();
     }
 
     @Override
-    public VMap put(Object key, Object value) {
-        VHashMap sim = copy();
+    public VMap<K, V> put(K key, V value) {
+        VHashMap<K, V> sim = copy();
         sim.map.put(sim.version, key, value);
         return sim;
     }
 
     @Override
-    public VMap put(Tuple... tuples) {
-        VHashMap sim = copy();
-        sim.map.put(sim.version, tuples);
+    public VMap<K, V> put(Pair<K, V>... pairs) {
+        VHashMap<K, V> sim = copy();
+        sim.map.put(sim.version, pairs);
         return sim;
     }
 
@@ -99,28 +99,40 @@ public class VHashMap implements VMap {
     public int size() { return map == null ? 0 : map.size(); }
 
     @Override
-    public Iterator<Object> valueIterator() {
-        return new SimpleImmutableMapIterator(false);
+    public Iterator<V> valueIterator() {
+        return new ValueIterator<V>();
     }
 
-    class SimpleImmutableMapIterator implements Iterator {
+    class KeyIterator<K> implements Iterator<K> {
 
-        private Iterator iterator;
-        private boolean wantKeys;
-
-        SimpleImmutableMapIterator(boolean wantKeys) {
-            iterator = map.iterator();
-            this.wantKeys = wantKeys;
-        }
+        private Iterator<VMapEntry> iterator = map.iterator();
 
         @Override
         public boolean hasNext() { return iterator.hasNext(); }
 
         @Override
-        public Object next() {
-            VMapEntry entry = (VMapEntry) iterator.next();
-            return entry == null ? null :
-                wantKeys ? entry.key : entry.getValue(versionSet);
+        public K next() {
+            @SuppressWarnings("unchecked")
+            VMapEntry<K, V> entry = iterator.next();
+            return entry == null ? null : entry.key;
+        }
+
+        @Override
+        public void remove() { iterator.remove(); }
+    }
+
+    class ValueIterator<V> implements Iterator<V> {
+
+        private Iterator<VMapEntry> iterator = map.iterator();
+
+        @Override
+        public boolean hasNext() { return iterator.hasNext(); }
+
+        @Override
+        public V next() {
+            @SuppressWarnings("unchecked")
+            VMapEntry<K, V> entry = iterator.next();
+            return entry == null ? null : entry.getValue(versionSet);
         }
 
         @Override

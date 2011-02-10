@@ -22,7 +22,9 @@
     description="compiles source files">
     <javac srcdir="src" destdir="build/classes"
       classpathref="classpath" deprecation="on" debug="on"
-      includeantruntime="false"/>
+      includeantruntime="false">
+      <compilerarg value="-Xlint:unchecked"/>
+    </javac>
   </target>
 
   <target name="javadoc" depends="compile"
@@ -84,7 +86,9 @@
   <target name="zip" depends="clean"
     description="creates a zip file containing all the files in this project">
     <zip destfile="../${ant.project.name}.zip"
-      basedir=".." includes="${ant.project.name}/**"/>
+      basedir=".."
+      includes="${ant.project.name}/**"
+      excludes="${ant.project.name}/nbproject/**"/>
   </target>
 
 </project>

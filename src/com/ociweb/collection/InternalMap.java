@@ -1,32 +1,36 @@
 package com.ociweb.collection;
 
+import java.lang.reflect.Array;
 import java.util.BitSet;
 import java.util.Iterator;
 
-class InternalMap {
+class InternalMap<K, V> {
 
-    private static final double LOAD_FACTOR_LIMIT = 1.5; //0.75;
+    //private static final double LOAD_FACTOR_LIMIT = 1.5; //0.75;
     private static final int INITIAL_BUCKET_COUNT = 11;
 
-    private VMapEntry[] buckets;
+    private VMapEntry<K, V>[] buckets;
     private int size;
 
     InternalMap() {
         this(INITIAL_BUCKET_COUNT);
     }
 
+    @SuppressWarnings("unchecked")
     InternalMap(int bucketCount) {
         //log("ctor", "bucketCount", bucketCount);
-        buckets = new VMapEntry[bucketCount];
+        //buckets = new VMapEntry<K, V>[bucketCount];
+        buckets = (VMapEntry<K, V>[])
+            Array.newInstance(VMapEntry.class, bucketCount);
     }
 
-    boolean contains(BitSet versionSet, Object key) {
+    boolean contains(BitSet versionSet, K key) {
         return get(versionSet, key) != null;
     }
 
-    void delete(int version, Object... keys) {
-        for (Object key : keys) {
-            VMapEntry entry = getEntry(key);
+    void delete(int version, K... keys) {
+        for (K key : keys) {
+            VMapEntry<K, V> entry = getEntry(key);
             if (entry != null) {
                 entry.addValue(version, null);
                 size--;
@@ -42,7 +46,7 @@ class InternalMap {
 
         for (int i = 0; i < buckets.length; i++) {
             System.out.println("bucket " + i);
-            VMapEntry entry = buckets[i];
+            VMapEntry<K, V> entry = buckets[i];
             System.out.print("  ");
             if (entry == null) {
                 System.out.println("empty");
@@ -56,14 +60,12 @@ class InternalMap {
         }
     }
 
-    VMapEntry firstEntry() { return nextEntry(0); }
-
-    Object get(BitSet versionSet, Object key) {
-        VMapEntry entry = getEntry(key);
+    V get(BitSet versionSet, K key) {
+        VMapEntry<K, V> entry = getEntry(key);
         return entry == null ? null : entry.getValue(versionSet);
     }
 
-    private int getBucketIndex(Object key) {
+    private int getBucketIndex(K key) {
         return getBucketIndex(key.hashCode());
     }
 
@@ -71,13 +73,13 @@ class InternalMap {
         return (int) (Math.abs(hashCode) % buckets.length);
     }
 
-    private VMapEntry getEntry(Object key) {
+    private VMapEntry<K, V> getEntry(K key) {
         int bucketIndex = getBucketIndex(key);
         return getEntry(bucketIndex, key);
     }
 
-    private VMapEntry getEntry(
-        int bucketIndex, Object key) {
+    private VMapEntry<K, V> getEntry(
+        int bucketIndex, K key) {
 
         long hashCode = key.hashCode();
         /*
@@ -87,7 +89,7 @@ class InternalMap {
             ", hashCode=" + hashCode);
         */
 
-        VMapEntry entry = buckets[bucketIndex];
+        VMapEntry<K, V> entry = buckets[bucketIndex];
         while (entry != null) {
             // TODO: It may be faster to only compare keys.
             //if (entry.hashCode == hashCode && entry.key.equals(key)) {
@@ -102,7 +104,30 @@ class InternalMap {
         return null;
     }
 
-    Iterator iterator() { return new MyIterator(); }
+    VMapEntry<K, V> getFirstEntry() { return getNextEntry(0); }
+
+    VMapEntry<K, V> getNextEntry(VMapEntry<K, V> prev) {
+        VMapEntry<K, V> next = prev.next;
+        if (next != null) return next;
+
+        int bucketIndex = getBucketIndex(prev.hashCode);
+        return getNextEntry(bucketIndex + 1);
+    }
+
+    VMapEntry<K, V> getNextEntry(int bucketIndex) {
+        while (bucketIndex < buckets.length) {
+            VMapEntry<K, V> next = buckets[bucketIndex];
+            if (next != null) return next;
+            bucketIndex++;
+        }
+
+        return null;
+    }
+
+    /**
+     * Iterates through the VMapEntry objects in this InternalMap.
+     */
+    Iterator<VMapEntry> iterator() { return new MyIterator<K, V>(this); }
 
     private void log(String method, Object msg) {
         System.out.println("InternalMap." + method + ": " + msg);
@@ -112,25 +137,7 @@ class InternalMap {
         log(method, name + " = " + value);
     }
 
-    VMapEntry nextEntry(VMapEntry prev) {
-        VMapEntry next = prev.next;
-        if (next != null) return next;
-
-        int bucketIndex = getBucketIndex(prev.hashCode);
-        return nextEntry(bucketIndex + 1);
-    }
-
-    VMapEntry nextEntry(int bucketIndex) {
-        while (bucketIndex < buckets.length) {
-            VMapEntry next = buckets[bucketIndex];
-            if (next != null) return next;
-            bucketIndex++;
-        }
-
-        return null;
-    }
-
-    void put(int version, Object key, Object value) {
+    void put(int version, K key, V value) {
         int bucketIndex = getBucketIndex(key);
         /*
         System.out.println("InternalMap.put: version=" + version +
@@ -139,13 +146,13 @@ class InternalMap {
             ", bucketIndex=" + bucketIndex);
         */
 
-        VMapEntry entry = getEntry(bucketIndex, key);
+        VMapEntry<K, V> entry = getEntry(bucketIndex, key);
         if (entry == null) {
             // Get first entry in proper bucket.
             entry = buckets[bucketIndex];
 
             // Create new entry.
-            entry = new VMapEntry(key, entry);
+            entry = new VMapEntry<K, V>(key, entry);
 
             // Make it the first entry in the bucket.
             buckets[bucketIndex] = entry;
@@ -159,28 +166,33 @@ class InternalMap {
         entry.addValue(version, value);
     }
 
-    void put(int version, Tuple... tuples) {
-        for (Tuple tuple : tuples) {
-            put(version, tuple.first, tuple.second);
+    void put(int version, Pair<K, V>... pairs) {
+        for (Pair<K, V> pair : pairs) {
+            put(version, pair.key, pair.value);
         }
     }
 
     void rehash() {
         int newBucketCount = (buckets.length * 2) + 1;
         //log("rehash", "newBucketCount", newBucketCount);
-        VMapEntry[] newBuckets = new VMapEntry[newBucketCount];
+
+        //VMapEntry<K, V>[] newBuckets = new VMapEntry<K, V>[newBucketCount];
+        @SuppressWarnings("unchecked")
+        VMapEntry<K, V>[] newBuckets = (VMapEntry<K, V>[])
+            Array.newInstance(VMapEntry.class, newBucketCount);
+
         byte[] newBucketLengths = new byte[newBucketCount];
 
         for (int bucketIndex = 0; bucketIndex < buckets.length; bucketIndex++) {
-            VMapEntry entry = buckets[bucketIndex];
+            VMapEntry<K, V> entry = buckets[bucketIndex];
             while (entry != null) {
-                VMapEntry nextEntry = entry.next;
+                VMapEntry<K, V> nextEntry = entry.next;
 
                 int newBucketIndex =
                     (int) (Math.abs(entry.hashCode) % newBucketCount);
 
                 // Get current first entry in bucket.
-                VMapEntry newEntry = newBuckets[newBucketIndex];
+                VMapEntry<K, V> newEntry = newBuckets[newBucketIndex];
 
                 // Change existing entry to point to current first entry.
                 entry.next = newEntry;
@@ -205,18 +217,21 @@ class InternalMap {
         return "InternalMap with " + size + " entries";
     }
 
-    class MyIterator implements Iterator {
+    class MyIterator<K, V> implements Iterator<VMapEntry> {
 
-        VMapEntry nextEntry;
+        InternalMap<K,V> map;
+        VMapEntry<K, V> nextEntry;
         int seenCount;
+
+        MyIterator(InternalMap<K,V> map) { this.map = map; }
 
         @Override
         public boolean hasNext() { return seenCount < size; }
 
         @Override
-        public Object next() {
+        public VMapEntry<K, V> next() {
             nextEntry = nextEntry == null ?
-                firstEntry() : nextEntry(nextEntry);
+                map.getFirstEntry() : map.getNextEntry(nextEntry);
             if (nextEntry != null) seenCount++;
             return nextEntry;
         }

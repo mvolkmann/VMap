@@ -2,25 +2,25 @@ package com.ociweb.collection;
 
 import java.util.BitSet;
 
-class VMapEntry {
+class VMapEntry<K, V> {
 
     long hashCode;
-    VersionValue firstVV;
-    VMapEntry next;
-    Object key;
+    VersionValue<V> firstVV;
+    VMapEntry<K, V> next;
+    K key;
 
-    VMapEntry(Object key, VMapEntry next) {
+    VMapEntry(K key, VMapEntry<K, V> next) {
         this.key = key;
         this.next = next;
         this.hashCode = key.hashCode();
     }
 
-    void addValue(int version, Object value) {
-        firstVV = new VersionValue(version, value, firstVV);
+    void addValue(int version, V value) {
+        firstVV = new VersionValue<V>(version, value, firstVV);
     }
 
-    Object getValue(BitSet versionSet) {
-        VersionValue vv = firstVV;
+    V getValue(BitSet versionSet) {
+        VersionValue<V> vv = firstVV;
         while (vv != null) {
             if (versionSet.get(vv.version)) return vv.value;
             vv = vv.next;

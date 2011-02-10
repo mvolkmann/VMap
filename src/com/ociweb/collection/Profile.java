@@ -14,12 +14,12 @@ public class Profile {
 
     public static void main(String[] args) {
         List<String> words = getWords();
-        VSet iSet = load(words);
-        check(words, iSet);
+        VSet<String> vSet = load(words);
+        check(words, vSet);
     }
 
-    private static void check(List<String> words, VSet iSet) {
-        for (String word : words) assert(iSet.contains(word));
+    private static void check(List<String> words, VSet<String> vSet) {
+        for (String word : words) assert(vSet.contains(word));
     }
 
     private static String cleanWord(String word) {
@@ -30,7 +30,7 @@ public class Profile {
     }
 
     static Set<String> getUniqueWords() {
-        return new HashSet(getWords());
+        return new HashSet<String>(getWords());
     }
 
     static List<String> getWords() {
@@ -69,9 +69,9 @@ public class Profile {
         return wordList;
     }
 
-    private static VSet load(List<String> words) {
-        VSet iSet = new VHashSet();
-        for (String word : words) iSet = iSet.add(word);
-        return iSet;
+    private static VSet<String> load(List<String> words) {
+        VSet<String> vSet = new VHashSet<String>();
+        for (String word : words) vSet = vSet.add(word);
+        return vSet;
     }
 }

@@ -16,7 +16,7 @@ public class InternalMapTest {
      */
     @Test
     public void testRehash() {
-        InternalMap map = new InternalMap();
+        InternalMap<String, Integer> map = new InternalMap<String, Integer>();
         int version = 0;
         map.put(version, "foo", 1);
         map.put(version, "bar", 2);

@@ -18,7 +18,7 @@ public class VHashSetTest {
 
     @Test
     public void testAddMultiple() {
-        VSet set = new VHashSet("foo", "bar", "baz");
+        VSet<String> set = new VHashSet<String>("foo", "bar", "baz");
         assertEquals(3, set.size());
         assertTrue(set.contains("foo"));
         assertTrue(set.contains("bar"));
@@ -27,8 +27,8 @@ public class VHashSetTest {
 
     @Test
     public void testAddSingle() {
-        VSet set0 = new VHashSet();
-        VSet set1 = set0.add("foo");
+        VSet<String> set0 = new VHashSet<String>();
+        VSet<String> set1 = set0.add("foo");
         assertTrue(set1.getVersion() == set0.getVersion() + 1);
 
         assertTrue(!set0.contains("foo"));
@@ -40,7 +40,7 @@ public class VHashSetTest {
         String text = "Alice was beginning to get very tired";
         List<String> words =
             new ArrayList<String>(Arrays.asList(text.split(" ")));
-        VSet set = new VHashSet();
+        VSet<String> set = new VHashSet<String>();
         for (String word : words) {
             set = set.add(word);
             //System.out.println();
@@ -59,10 +59,10 @@ public class VHashSetTest {
 
     @Test
     public void testAddRepeat() {
-        VSet set0 = new VHashSet();
-        VSet set1 = set0.add("foo", "bar");
-        VSet set2 = set1.delete("foo");
-        VSet set3 = set2.add("baz");
+        VSet<String> set0 = new VHashSet<String>();
+        VSet<String> set1 = set0.add("foo", "bar");
+        VSet<String> set2 = set1.delete("foo");
+        VSet<String> set3 = set2.add("baz");
 
         assertTrue(!set0.contains("foo"));
         assertTrue(!set0.contains("bar"));
@@ -83,15 +83,15 @@ public class VHashSetTest {
 
     @Test
     public void testClear() {
-        VSet set0 = new VHashSet("foo", "bar", "baz");
+        VSet<String> set0 = new VHashSet<String>("foo", "bar", "baz");
         assertEquals(3, set0.size());
-        VSet set1 = set0.clear();
+        VSet<String> set1 = set0.clear();
         assertEquals(0, set1.size());
     }
 
     @Test
     public void testContains() {
-        VSet set = new VHashSet("foo", "bar", "baz");
+        VSet<String> set = new VHashSet<String>("foo", "bar", "baz");
         assertTrue(set.contains("foo"));
         assertTrue(set.contains("bar"));
         assertTrue(set.contains("baz"));
@@ -100,11 +100,11 @@ public class VHashSetTest {
 
     @Test
     public void testDelete() {
-        VSet set0 = new VHashSet();
-        VSet set1 = set0.add("foo");
+        VSet<String> set0 = new VHashSet<String>();
+        VSet<String> set1 = set0.add("foo");
         assertTrue(set1.getVersion() == set0.getVersion() + 1);
 
-        VSet set2 = set1.delete("foo");
+        VSet<String> set2 = set1.delete("foo");
         assertTrue(set2.getVersion() == set1.getVersion() + 1);
 
         assertTrue(!set0.contains("foo"));
@@ -115,16 +115,16 @@ public class VHashSetTest {
     @Test
     public void testIterator() {
         // Using a Java Set just for testing.
-        Object[] values = new String[] { "foo", "bar", "baz" };
-        Set valueSet = new HashSet(Arrays.asList(values));
+        String[] values = new String[] { "foo", "bar", "baz" };
+        Set<String> valueSet = new HashSet<String>(Arrays.asList(values));
 
-        VSet set = new VHashSet(values);
+        VSet<String> set = new VHashSet<String>(values);
 
-        Iterator iter = set.iterator();
+        Iterator<String> iter = set.iterator();
 
         while (!valueSet.isEmpty()) {
             assertTrue(iter.hasNext());
-            Object value = iter.next();
+            String value = iter.next();
             assertTrue(valueSet.contains(value));
             valueSet.remove(value);
         }
@@ -139,7 +139,7 @@ public class VHashSetTest {
         // Test standard Java set.
         //---------------------------------------------------------------------
         long startTime = System.currentTimeMillis();
-        Set mSet = new HashSet();
+        Set<String> mSet = new HashSet<String>();
         for (String word : words) mSet.add(word);
         for (String word : words) assertTrue(mSet.contains(word));
         long mSetElapsed = System.currentTimeMillis() - startTime;
@@ -148,24 +148,24 @@ public class VHashSetTest {
         // Test immutable set.
         //---------------------------------------------------------------------
         startTime = System.currentTimeMillis();
-        VSet iSet = new VHashSet();
-        for (String word : words) iSet = iSet.add(word);
-        for (String word : words) assertTrue(word, iSet.contains(word));
-        long iSetElapsed = System.currentTimeMillis() - startTime;
+        VSet<String> vSet = new VHashSet<String>();
+        for (String word : words) vSet = vSet.add(word);
+        for (String word : words) assertTrue(word, vSet.contains(word));
+        long vSetElapsed = System.currentTimeMillis() - startTime;
 
         //---------------------------------------------------------------------
         // Compare their performance.
         //---------------------------------------------------------------------
         String msg =
-            "immutable set performance (" + iSetElapsed + ") < " +
+            "immutable set performance (" + vSetElapsed + ") < " +
             "triple mutable set performance (" + mSetElapsed + ')';
         log(msg);
-        assertTrue(msg, iSetElapsed < 3*mSetElapsed);
+        assertTrue(msg, vSetElapsed < 3*mSetElapsed);
     }
 
     @Test
     public void testSize() {
-        VSet set = new VHashSet("foo", "bar", "baz");
+        VSet<String> set = new VHashSet<String>("foo", "bar", "baz");
         assertEquals(3, set.size());
     }
 }

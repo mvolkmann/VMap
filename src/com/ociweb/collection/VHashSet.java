@@ -3,18 +3,18 @@ package com.ociweb.collection;
 import java.util.BitSet;
 import java.util.Iterator;
 
-public class VHashSet implements VSet {
+public class VHashSet<K> implements VSet<K> {
 
     private BitSet versionSet;
-    private InternalMap map;
+    private InternalMap<K, Boolean> map;
     private int version;
 
     public VHashSet() {}
 
-    public VHashSet(Object... values) {
-        map = new InternalMap(values.length);
+    public VHashSet(K... values) {
+        map = new InternalMap<K, Boolean>(values.length);
 
-        for (Object value : values) {
+        for (K value : values) {
             log("ctor", "value", value);
             map.put(version, value, true);
         }
@@ -24,29 +24,29 @@ public class VHashSet implements VSet {
     }
 
     @Override
-    public final VSet add(Object... values) {
-        VHashSet sis = copy();
-        for (Object value : values) {
+    public final VSet<K> add(K... values) {
+        VHashSet<K> sis = copy();
+        for (K value : values) {
             sis.map.put(sis.version, value, true);
         }
         return sis;
     }
 
     @Override
-    public VHashSet clear() {
-        return new VHashSet();
+    public VHashSet<K> clear() {
+        return new VHashSet<K>();
     }
 
     @Override
-    public boolean contains(Object value) {
+    public boolean contains(K value) {
         if (map == null) return false;
-        Object found = map.get(versionSet, value);
-        return found == null ? false : (Boolean) found;
+        Boolean found = map.get(versionSet, value);
+        return found == null ? false : found;
     }
 
-    private synchronized VHashSet copy() {
-        VHashSet sis = new VHashSet();
-        sis.map = map == null ? new InternalMap() : map;
+    private synchronized VHashSet<K> copy() {
+        VHashSet<K> sis = new VHashSet<K>();
+        sis.map = map == null ? new InternalMap<K, Boolean>() : map;
         sis.version = version + 1;
         sis.versionSet = new BitSet(sis.version);
         if (versionSet != null) sis.versionSet.or(versionSet);
@@ -55,8 +55,8 @@ public class VHashSet implements VSet {
     }
 
     @Override
-    public VSet delete(Object... values) {
-        VHashSet sis = copy();
+    public VSet<K> delete(K... values) {
+        VHashSet<K> sis = copy();
         sis.map.delete(sis.version, values);
         return sis;
     }
@@ -88,12 +88,12 @@ public class VHashSet implements VSet {
     }
 
     @Override
-    public Iterator<Object> iterator() {
-        return new SimpleImmutableSetIterator();
+    public Iterator<K> iterator() {
+        return new VHashSetIterator<K, Boolean>();
     }
 
     private void log(String method, Object msg) {
-        //System.out.println("SimpleImmutableSet." + method + ": " + msg);
+        //System.out.println("VHashSet." + method + ": " + msg);
     }
 
     private void log(String method, String name, Object value) {
@@ -103,18 +103,19 @@ public class VHashSet implements VSet {
     @Override
     public int size() { return map == null ? 0 : map.size(); }
 
-    class SimpleImmutableSetIterator implements Iterator {
+    class VHashSetIterator<K, V> implements Iterator<K> {
 
-        private Iterator iterator;
+        private Iterator<VMapEntry> iterator;
 
-        SimpleImmutableSetIterator() { iterator = map.iterator(); }
+        VHashSetIterator() { iterator = map.iterator(); }
 
         @Override
         public boolean hasNext() { return iterator.hasNext(); }
 
         @Override
-        public Object next() {
-            VMapEntry entry = (VMapEntry) iterator.next();
+        public K next() {
+            @SuppressWarnings("unchecked")
+            VMapEntry<K, V> entry = iterator.next();
             return entry == null ? null : entry.key;
         }
 

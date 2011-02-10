@@ -2,27 +2,27 @@ package com.ociweb.collection;
 
 import java.util.Iterator;
 
-public interface VMap {
+public interface VMap<K, V> {
 
-    VMap clear();
+    VMap<K, V> clear();
 
-    boolean containsKey(Object key);
+    boolean containsKey(K key);
 
-    VMap delete(Object... keys);
+    VMap<K, V> delete(K... keys);
 
     void dump();
 
-    Object get(Object key);
+    V get(K key);
 
     long getVersion();
 
-    Iterator<Object> keyIterator();
+    Iterator<K> keyIterator();
 
-    VMap put(Object key, Object value);
+    VMap<K, V>  put(K key, V value);
 
-    VMap put(Tuple... tuples);
+    VMap<K, V> put(Pair<K, V>... pairs);
 
     int size();
 
-    Iterator<Object> valueIterator();
+    Iterator<V> valueIterator();
 }
