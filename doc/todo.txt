@@ -1,0 +1,10 @@
+VMap ToDos
+
+- Should you provide methods for getting sets of keys and values?
+  Maybe you should only provide the ability to get an iterator.
+
+- Add a method to prune a map or set.
+  It should remove all old VersionValue objects
+  so that each VMapEntry has only one VersionValue,
+  change the version to 1 in all VersionValue objects,
+  and change the version of the map or set to 1.

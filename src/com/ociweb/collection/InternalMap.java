@@ -1,44 +1,81 @@
 package com.ociweb.collection;
 
 import java.lang.reflect.Array;
-import java.util.BitSet;
 import java.util.Iterator;
 
+/**
+ * This is used to store the entries for VHashMap objects.
+ * @param <K> the key type
+ * @param <V> the value type
+ * @author R. Mark Volkmann, Object Computing, Inc.
+ */
 class InternalMap<K, V> {
 
-    //private static final double LOAD_FACTOR_LIMIT = 1.5; //0.75;
-    private static final int INITIAL_BUCKET_COUNT = 11;
+    //private static final float LOAD_FACTOR_LIMIT = 0.75f;
+    static final int INITIAL_BUCKET_COUNT = 11;
 
     private VMapEntry<K, V>[] buckets;
     private int size;
 
+    /**
+     * Creates an InternalMap with the default initial capacity.
+     */
     InternalMap() {
         this(INITIAL_BUCKET_COUNT);
     }
 
+    /**
+     * Creates an InternalMap with a specified initial capacity.
+     * @param bucketCount the initial capacity
+     */
     @SuppressWarnings("unchecked")
     InternalMap(int bucketCount) {
-        //log("ctor", "bucketCount", bucketCount);
+        // Can't create generic arrays in Java!
         //buckets = new VMapEntry<K, V>[bucketCount];
         buckets = (VMapEntry<K, V>[])
             Array.newInstance(VMapEntry.class, bucketCount);
     }
 
-    boolean contains(BitSet versionSet, K key) {
-        return get(versionSet, key) != null;
+    /**
+     * Determines whether this map contains a given key
+     * that is present in a given version of this map.
+     * @param version
+     * @param key
+     * @return true if present; false otherwise
+     */
+    final synchronized boolean contains(Version version, K key) {
+        return get(version, key) != null;
     }
 
-    void delete(int version, K... keys) {
+    /**
+     * Deletes any number of entries from a given version of this map.
+     * They are "deleted" by adding a null value for the keys.
+     * This means there is no way to distinguish between
+     * keys that are missing and keys that are present with a null value.
+     * @param version the Version
+     * @param keys the keys of the entries to be deleted
+     * @return the number of entries that were deleted.
+     */
+    final synchronized int delete(Version version, K... keys) {
+        int deletedCount = 0;
+
         for (K key : keys) {
             VMapEntry<K, V> entry = getEntry(key);
             if (entry != null) {
                 entry.addValue(version, null);
                 size--;
+                deletedCount++;
             }
         }
+
+        return deletedCount;
     }
 
-    public void dump() {
+    /**
+     * Dumps the contents of this map to stdout
+     * in a form that is useful for debugging.
+     */
+    final synchronized public void dump() {
         if (buckets == null) {
             System.out.println("  empty");
             return;
@@ -47,56 +84,70 @@ class InternalMap<K, V> {
         for (int i = 0; i < buckets.length; i++) {
             System.out.println("bucket " + i);
             VMapEntry<K, V> entry = buckets[i];
-            System.out.print("  ");
             if (entry == null) {
-                System.out.println("empty");
+                System.out.println("  empty");
             } else {
                 while (entry != null) {
-                    System.out.print(entry + " ");
+                    System.out.println(entry);
                     entry = entry.next;
                 }
-                System.out.println();
             }
         }
     }
 
-    V get(BitSet versionSet, K key) {
+    /**
+     * Gets the value for a given key in a given version of this map.
+     * @param version the Version
+     * @param key the key
+     * @return the value
+     */
+    final synchronized V get(Version version, K key) {
         VMapEntry<K, V> entry = getEntry(key);
-        return entry == null ? null : entry.getValue(versionSet);
+        return entry == null ? null : entry.getValue(version);
     }
 
+    /**
+     * Gets the bucket index of a given key.
+     * @param key the key
+     * @return the bucket index
+     */
     private int getBucketIndex(K key) {
         return getBucketIndex(key.hashCode());
     }
 
+    /**
+     * Gets the bucket index of a given hash code.
+     * @param hashCode the hash code
+     * @return the bucket index
+     */
     private int getBucketIndex(long hashCode) {
         return (int) (Math.abs(hashCode) % buckets.length);
     }
 
+    /**
+     * Gets the entry object for a given key.
+     * @param value the value
+     * @return the VMapEntry
+     */
     private VMapEntry<K, V> getEntry(K key) {
         int bucketIndex = getBucketIndex(key);
         return getEntry(bucketIndex, key);
     }
 
+    /**
+     * Gets the entry object for a given bucket index and value.
+     * @param bucketIndex the bucket index
+     * @param value the value
+     * @return the VMapEntry
+     */
     private VMapEntry<K, V> getEntry(
         int bucketIndex, K key) {
 
-        long hashCode = key.hashCode();
-        /*
-        System.out.println("InternalMap.getEntry: " +
-            "bucketIndex=" + bucketIndex +
-            ", key=" + key +
-            ", hashCode=" + hashCode);
-        */
-
         VMapEntry<K, V> entry = buckets[bucketIndex];
         while (entry != null) {
-            // TODO: It may be faster to only compare keys.
+            // TODO: Is it faster to only compare keys?
             //if (entry.hashCode == hashCode && entry.key.equals(key)) {
-            if (entry.key.equals(key)) {
-                //System.out.println("InternalMap.getEntry: found");
-                return entry;
-            }
+            if (entry.key.equals(key)) return entry;
             entry = entry.next;
         }
 
@@ -104,9 +155,17 @@ class InternalMap<K, V> {
         return null;
     }
 
-    private VMapEntry<K, V> getFirstEntry() { return getNextEntry(0); }
+    /**
+     * Gets the first entry object in this map.
+     * @return the first VMapEntry
+     */
+    private VMapEntry<K, V> getFirstEntry() {
+        return getNextEntry(0);
+    }
 
-    private VMapEntry<K, V> getNextEntry(VMapEntry<K, V> prev) {
+    final synchronized VMapEntry<K, V> getNextEntry(
+        VMapEntry<K, V> prev) {
+
         VMapEntry<K, V> next = prev.next;
         if (next != null) return next;
 
@@ -127,24 +186,18 @@ class InternalMap<K, V> {
     /**
      * Iterates through the VMapEntry objects in this InternalMap.
      */
-    Iterator<VMapEntry> iterator() { return new MyIterator<K, V>(this); }
-
-    private void log(String method, Object msg) {
-        System.out.println("InternalMap." + method + ": " + msg);
+    final Iterator<VMapEntry> iterator(Version version) {
+        return new MyIterator<K, V>(version, this);
     }
 
-    private void log(String method, String name, Object value) {
-        log(method, name + " = " + value);
-    }
+    /**
+     * @return true if a new entry was added;
+     *         false if the value of an existing entry was changed
+     */
+    final synchronized boolean put(Version version, K key, V value) {
+        boolean added = true; // assume
 
-    void put(int version, K key, V value) {
         int bucketIndex = getBucketIndex(key);
-        /*
-        System.out.println("InternalMap.put: version=" + version +
-            ", key=" + key +
-            ", value=" + value +
-            ", bucketIndex=" + bucketIndex);
-        */
 
         VMapEntry<K, V> entry = getEntry(bucketIndex, key);
         if (entry == null) {
@@ -158,25 +211,36 @@ class InternalMap<K, V> {
             buckets[bucketIndex] = entry;
 
             size++;
-            //double loadFactor = size / buckets.length;
+
+            // The performance test for VHashSet does worse using load factor.
+            //float loadFactor = ((float) size) / buckets.length;
             //if (loadFactor > LOAD_FACTOR_LIMIT) rehash();
             if (size > buckets.length) rehash();
+        } else {
+            added = false;
         }
 
         entry.addValue(version, value);
+
+        return added;
     }
 
-    void put(int version, Pair<K, V>... pairs) {
+    /**
+     * @return the number of entries that were added
+     */
+    final synchronized int put(Version version, Pair<K, V>... pairs) {
+        int addedCount = 0;
+
         for (Pair<K, V> pair : pairs) {
-            put(version, pair.key, pair.value);
+            if (put(version, pair.key, pair.value)) addedCount++;
         }
+
+        return addedCount;
     }
 
-    void rehash() {
+    final synchronized void rehash() {
         int newBucketCount = (buckets.length * 2) + 1;
-        //log("rehash", "newBucketCount", newBucketCount);
 
-        //VMapEntry<K, V>[] newBuckets = new VMapEntry<K, V>[newBucketCount];
         @SuppressWarnings("unchecked")
         VMapEntry<K, V>[] newBuckets = (VMapEntry<K, V>[])
             Array.newInstance(VMapEntry.class, newBucketCount);
@@ -210,35 +274,43 @@ class InternalMap<K, V> {
         buckets = newBuckets; // Previous buckets will be GCed.
     }
 
-    int size() { return size; }
-
     @Override
-    public String toString() {
+    public final String toString() {
         return "InternalMap with " + size + " entries";
     }
 
     static class MyIterator<K, V> implements Iterator<VMapEntry> {
 
-        InternalMap<K,V> map;
-        VMapEntry<K, V> nextEntry;
-        int seenCount;
+        InternalMap<K, V> map;
+        Version version;
+        VMapEntry<K, V> next;
 
-        MyIterator(InternalMap<K,V> map) { this.map = map; }
+        MyIterator(Version version, InternalMap<K, V> map) {
+            this.version = version;
+            this.map = map;
+            setNext();
+        }
 
         @Override
-        public boolean hasNext() { return seenCount < map.size; }
+        public boolean hasNext() { return next != null; }
 
         @Override
         public VMapEntry<K, V> next() {
-            nextEntry = nextEntry == null ?
-                map.getFirstEntry() : map.getNextEntry(nextEntry);
-            if (nextEntry != null) seenCount++;
-            return nextEntry;
+            VMapEntry<K, V> result = next;
+            setNext();
+            return result;
         }
 
         @Override
         public void remove() {
             throw new UnsupportedOperationException("can't remove elements");
+        }
+
+        private void setNext() {
+            next = next == null ?  map.getFirstEntry() : map.getNextEntry(next);
+            while (next != null && !next.contains(version)) {
+                next = map.getNextEntry(next);
+            }
         }
     }
 }

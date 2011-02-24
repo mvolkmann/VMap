@@ -1,10 +1,14 @@
 package com.ociweb.collection;
 
+/**
+ * A versioned value in a VMap.
+ * @author R. Mark Volkmann, Object Computing, Inc.
+ */
 class VersionValue<V> {
 
-    final int version;
     final VersionValue<V> next;
     final V value;
+    final int version;
 
     VersionValue(int version, VersionValue<V> next) {
         this.version = version;
@@ -16,7 +20,10 @@ class VersionValue<V> {
         this.version = version;
         this.value = value;
         this.next = next;
-        //System.out.println("VersionValue.ctor: " +
-        //    "version=" + version + ", value=" + value);
+    }
+
+    @Override
+    public String toString() {
+        return "VersionValue: version=" + version + ", value=" + value;
     }
 }

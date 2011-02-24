@@ -107,7 +107,7 @@
     </style>
   </head>
   <body>
-    <a name="top"/>
+    <p><a name="top"/></p>
     <div class="quicklinks">
       <a href="http://www.ociweb.com">Home</a> |
       <a href="http://www.ociweb.com/sett/index.html">
@@ -151,51 +151,460 @@
       <br/>
     </div>
 
-    <h1>Article Title Here</h1>
+    <h1>A Hash Table for Functional Programming</h1>
     <p class="author">
-      by<br />
+      by<br/>
 
-      Firstname Lastname, Software Engineer
-      <br />Object Computing, Inc. (OCI)
+      R. Mark Volkmann, Partner
+      <br/>Object Computing, Inc. (OCI)
     </p>
 
     <h2>Introduction</h2>
     <p>
-      It is a good idea to start with an introduction. Note that with
-      XHTML, all tags are lowercase. Also be sure to enclose all normal
-      paragraphs in &lt;p&gt; tags.
+      This article is about an idea that came to me during a
+      two-hour drive from Columbia, Missouri to St. Charles.
+      I was deep in thought about functional programming
+      and the issues with using maps in that setting.
+      And then it hit me ... a new kind of hash table!
     </p>
 
-    <h2>First Big Topic</h2>
+    <h2>Some Basics</h2>
     <p>
-      The XHTML source looks really clean if authors take time to
-      properly indent.
+      Hash tables provide a way to store key/value pairs
+      and quickly look up values by key.
+      Only one value per key can be stored,
+      although the value can be a collection of values.
+      Sets are collections that do not allow duplicate elements and
+      typically provide a way to quickly determine whether
+      they contain a given element.
+      A set collection can be implemented using a hash table,
+      storing elements as the keys and ignoring the values.
+      For this reason, when discussing details of maps and sets
+      in this article, I will tend to only mention maps for brevity.
     </p>
     <p>
-      Here is another paragraph. Notice how, unlike sloppy HTML, we
-      surround paragraphs at the beginning and end with &lt;p&gt; tags.
-    </p>
-
-    <h2>Second Big Topic</h2>
-    <p>
-      Here is another major topic. This shows how to use a third
-      heading level.
-    </p>
-
-    <h3>Minor Topic</h3>
-    <p>
-      Try not to go beyond three levels of headings. &lt;h4&gt; and
-      &lt;h5&gt; are not forbidden, but should not be necessary.
-    </p>
-
-    <h3>Another Minor Topic</h3>
-    <p>
-      Here is an example of using some code in a sentence. When using the
-      <code>String</code> class, be sure to use <code>equals()</code>
-      instead of <code>=</code> when comparing two strings.
+      Another name for "hash table" is "hash map"
+      and many people simply use the term "map.
+      Likewise, many people refer to a "hash set" simply as a "set".
+      So that's what I'll do in this article.
     </p>
 
-    <h2>Final Big Topic</h2>
+    <h2>Notes On My Implementation</h2>
+    <p>
+      The hash table was invented in 1953.
+      It seems inconceivable that the variation described in this article
+      hasn't been conceived and publicized in the 58 years that followed.
+      I searched the web for a similar idea and did not find one.
+      Perhaps a reader will notify me that
+      my design is similar to an existing one.
+      Please let me know if that is the case.
+      I can be reached at "mark at ociweb dot com".
+    </p>
+    <p>
+      I chose Java for the first implementation only because I felt
+      more confident in creating a working, tested implemenation using it.
+      However, since Java is not a functional programming language,
+      Java developers may not be convinced of the value in using
+      the new map/set implementations presented here.
+      Users of functional languages such as
+      Lisp (include Clojure, Common Lisp, and Scheme) and Scala
+      will likely be more interested.
+    </p>
+
+    <h2>Functional Programming</h2>
+    <p>
+      Functional programming is a style of programming where code
+      is divided into functions rather than classes and methods.
+    </p>
+    <p>
+      There is an emphasis on writing "pure functions".
+      These do not access global state and do not cause side effects.
+      Not accessing global state means they only use data
+      passed to them via arguments.
+      Calling the same function later with the same arguments
+      will produce the same result.
+      Not causing side effects means they do not
+      modify global state, modify arguments, or produce any output.
+      They only return a value.
+      Pure functions are easier to understand and test.
+    </p>
+    <p>
+      Here's an example of a pure function in Java that operates on a map.
+    </p>
+    <pre xml:space="preserve">
+      Add an example here!
+    </pre>
+    <p>
+      Any useful program needs at least one function that has a side-effect.
+      Otherwise there will be no evidence that the code ever ran.
+    </p>
+
+    <h2>Map Keys</h2>
+    <p>
+      The objects used as keys in maps and elements in sets
+      must satisfy two criteria.
+    </p>
+    <p>
+      First, key objects must support a method to determine
+      whether they are "equal" to another object.
+      In Java, this is the <code>equals</code> method.
+      For example, a "Car" object might determine whether it is
+      equal to another object by verifying that
+      the other object is a Car object and
+      comparing make, model, year and color.
+      Alternatively, it might only compare VIN numbers.
+    </p>
+    <p>
+      Second, key objects must support a method for
+      computing a "hash code" value.
+      In Java, this is the <code>hashCode</code> method.
+      A hash code is an integer that is computed based on
+      the properties of the object that make it unique,
+      such as make, model, year and color.
+      It is important for hash code values to be well-distributed.
+      If many objects have the same hash code value,
+      lookups based on them will be slow.
+      The reason for this will be made clear soon.
+    </p>
+
+    <h2>Maps and Functional Programming</h2>
+    <p>
+      Typical implementations of maps are mutable.
+      New key/value pairs can be added and existing pairs can be removed.
+      This is of course an issue for functional programming.
+      To fix this, we need an implementation that is immutable.
+      But what good is a map that cannot be changed?
+    </p>
+    <p>
+      Suppose all the methods that typically mutate the map
+      instead return a new map that has the same content
+      as the original, but with the requested change made.
+      Creating the new one by copying the original would be too slow,
+      especially for large maps.
+      What we need is a way to allow new maps to
+      share data with the ones from which they were created,
+      but do so in a way that prevents code
+      with references to the original versions
+      from seeing the changes made in the new ones.
+      In a sense, the maps are logically, but not technically immutable.
+      Of course we also need lookups to remain fast.
+    </p>
+
+    <h2>How Maps Work</h2>
+    <p>
+      Many readers will already be familiar with the material in this section.
+      Feel free to skip ahead to "Versioned Maps and Sets".
+    </p>
+    <p>
+      In typical map implementations, key/value pairs
+      are stored in objects referred to as "map entries".
+      Map entries are stored in linked lists referred to as "chains".
+      Heads of the chains are stored in "buckets",
+      which are typically implemented using arrays.
+      The bucket for a particular map entry is determined by computing
+      the modulo of the hash code for the key by the number of buckets.
+      Chains are needed to manage "hash collisions" which occur when
+      more than one key, and therefore map entry, ends up in the same bucket.
+    </p>
+    <p>
+      In the diagram below, three key/values pairs have been added to a map.
+      The map currently has seven buckets.
+    </p>
+    <div><img src="MapInternals.png" alt="Map internals"/></div>
+
+    <h3>Adding Data</h3>
+    <p>
+      When each key/value pair is added, the following things happen:
+    </p>
+    <ol>
+      <li>the hash code of the key is computed</li>
+      <li>the modulo of the hash code and the number of buckets
+        is used to determine the bucket of the chain
+        in which the map entry will be added</li>
+      <li>a map entry is created to hold the hash code,
+        key object reference and value object reference</li>
+      <li>the map entry is inserted at the beginning of the chain
+        and the next pointers of the map entry objects
+        are updated accordingly
+        (can insert anywhere; inserting at beginning
+        favors lookup of recently added keys)</li>
+    </ol>
+    <p>
+      As an example, suppose we want to add the key "foo" to a map
+      that currently has seven buckets (numbered zero through six).
+      The hash code that Java returns for "foo" is 101574.
+      101574 mod 7 is 4 so bucket 4 is used.
+    </p>
+
+    <h3>Retrieving Data</h3>
+    <p>
+      When the value corresponding to a given key is requested,
+      the following things happen:
+    </p>
+    <ol>
+      <li>the hash code of the key is computed</li>
+      <li>the modulo of the hash code and the number of buckets
+        is used to determine the bucket of the chain
+        in which the map entry resides</li>
+      <li>the chain for the selected bucket is searched to find
+        a key object that is equal to the specified key object</li>
+      <li>once a match is found,
+        the corresponding value object is returned</li>
+    </ol>
+
+    <h3>Removing Data</h3>
+    <p>
+      When a key/value pair is removed,
+      the steps are nearly identical to retrieving a value.
+      Rather than returning the value at the end,
+      the map entry is removed from its chain.
+    </p>
+
+    <h3>Rehashing</h3>
+    <p>
+      As the number of entries increases, the liklihood of
+      chains containing more than one entry increases.
+      This has an adverse impact on lookup performance
+      since the chains require a sequential search.
+    <p>
+    </p>
+      The "load factor" is the ratio of entries to buckets.
+      Many implementations perform a "rehash" when
+      the load factor reaches a number around 0.75.
+      The goal of a rehash is to return to the map to
+      a state where most chains contain only one map entry.
+    </p>
+    <p>
+      A rehash creates a new, larger bucket array.
+      A good new size is double the previous size plus one.
+      The entries from the old bucket array are moved to the new one
+      by computing their new bucket index (hash-code mod bucket-array-length)
+      and adding the entry to the front of the chain for that bucket.
+    </p>
+    <p>
+      When a rehash completes, the old bucket array can be garbage collected.
+      The entries are not garbage collected because
+      they are still referenced from the new bucket array.
+    </p>
+    <p>
+      If the approximiate number of entries to be added is known in advance,
+      an appropriate initial bucket array length can be selected
+      so the liklihood that a rehash will be needed is nearly eliminated.
+    </p>
+    
+    <h3>Poorly Distributed Hash Codes</h3>
+    <p>
+      Imagine what would happen the computed hash code
+      for many of the keys was the same.
+      Their map entry objects would all end up in the same chain.
+      Retrieving the value for a key would still work,
+      but it would be slow because it would require
+      a linear search through a long chain.
+      This points out the importance of computing
+      well-distributed hash codes.
+    </p>
+
+    <h3>Modifying Key Objects</h3>
+    <p>
+      Imagine what would happen if the properties of a key object
+      were modified after it was added to a map.
+      The computed hash code for the object could change.
+      This would mean that the map entry for the key
+      may no longer be in the correct chain.
+      An attempt to lookup the corresponding value for the key
+      would likely fail because it would select the wrong bucket
+      and therefore search the wrong chain.
+      This points out the importance of not modifying key objects
+      after they have been added to a map.
+    </p>
+
+START HERE
+    <h2>Versioned Maps and Sets</h2>
+    <p>
+      The new map/set collections I have implemented are
+      able to create new versions from existing collections.
+      The new versions share memory with previous versions,
+      but in a way that doesn't expose changes to the previous versions.
+    </p>
+
+    <h2>VMap and VSet Interfaces</h2>
+    <p>
+      The diagram below shows the methods in the VMap and VSet interfaces.
+      It also shows implementations of those interfaces, VHashMap and VHashSet.
+      Both utilize the class InternalMap which is responsible for storing
+      the array of buckets which stores chains of map entries.
+    </p>
+    <div><img src="VMapClassDiagram.png" alt="VMap class diagram"/></div>
+    <p>
+      A major difference between typical map/set implementations
+      and this one is that the map entries contain
+      a reference to a linked list of version/value objects,
+      rather than a single value object.
+    </p>
+    <p>
+      Each VHashMap and VHashSet object has a version and a version set.
+      When a new VHashMap/VHashSet object is created, its version is zero
+      and it has no version set.
+      When a mutating method is called
+      on a VHashMap (put, delete or clear),
+      a new VHashMap is created using the next available version number.
+      Likewise, when a mutating method is called
+      on a VHashSet (add, delete or clear),
+      a new VHashSet is created using the next available version number. 
+    </p>
+    <p>
+      The version set is a bit array that
+      describes the ancestry of the collection.
+      The version set for each of the new collections described above
+      will be the same as that its source collection,
+      but with the bit set for its version.
+    </p>
+    <p>
+      In the example below:
+    </p>
+    <ol>
+      <li>an empty map named map0 is created</li>
+      <li>map1 is created from map0, adding the key "red"</li>
+      <li>map2 is created from map1, adding the key "green"</li>
+      <li>map3 is created from map1, adding the key "blue"</li>
+    </ol>
+    <p>
+      map0 remains empty.<br/>
+      map1 only contains the key "red".<br/>
+      map2 only contains the keys "red" and "green".<br/>
+      map3 only contains the keys "red" and "blue".
+    </p>
+    <p>
+      map0 has no version set since it contains no values,
+      but can be thought of as "1".<br/>
+      map1 has the version set "11" which indicates that it includes
+      all values with a version of one or zero.<br/>
+      map2 has the version set "111" which indicates that it includes
+      all values with a version of two, one or zero.<br/>
+      map3 has the version set "1011" which indicates that it includes
+      all values with a version of three, one or zero.
+    </p>
+    <div><img src="VMapObjects.png" alt="VMap objects"/></div>
+
+    <h2>VHashMap and VHashSet Implementations</h2>
+    <p>
+      VHashMap and VHashSet objects are fairly lightweight.
+      They contain a version number,
+      a bit array for storing version ancestery and
+      a reference to an internal map that is
+      shared with all ancestors and descendents.
+    </p>
+    <div><img src="VMapInternals.png" alt="VMap internals"/></div>
+    <p>
+      In the Java implementation, the bit array is
+      represented by a java.util.BitSet object.
+      This is the only Java collection class used in the Java implementation.
+    </p>
+    <p>
+      While VMaps and VSets are immutable,
+      the key/value objects added to them may not be.
+      Since a primary use case for these new collection types
+      is to use them in the context of functional programming,
+      it is important for the key/value objects to also be immutable.
+      These new collection types cannot enforce that,
+      so it becomes the responsibility of developers to ensure this.
+    </p>
+
+    <h2>Examples</h2>
+    <pre xml:space="preserve">
+      VMap<String, Integer> map0 = new VHashMap<String, Integer>();
+      // map0 is empty.
+
+      VMap<String, Integer> map1 = map0.put("foo", 1);
+      // map0 is still emtpy.
+      // map1 only contains the key "foo".
+
+      VMap<String, Integer> map2 = map1.put("bar", 2);
+      // map0 is still emtpy.
+      // map1 still only contains the key "foo".
+      // map2 contains the keys "foo" and "bar".
+
+      VMap<String, Integer> map3 = map2.delete("foo");
+      // map0 is still emtpy.
+      // map1 still only contains the key "foo".
+      // map2 still contains the keys "foo" and "bar".
+      // map3 only contains the key "bar".
+
+      VMap<String, Integer> map4 = map3.put("bar", 3);
+      // map0 is still emtpy.
+      // map1 still only contains the key "foo".
+      // map2 still contains the keys "foo" and "bar".
+      // map3 still only contains the key "bar".
+      // map4 contains the key "bar",
+      // but with a different value than in map2.
+
+      VMap<String, Integer> map5 = map4.put("foo", 4);
+      // map0 is still emtpy.
+      // map1 still only contains the key "foo".
+      // map2 still contains the keys "foo" and "bar".
+      // map3 still only contains the key "bar".
+      // map4 still contains the key "bar",
+      // but with a different value than in map2.
+      // map5 contains the keys "foo" and "bar",
+      // but "foo" has a different value than in map1 and map2.
+    </pre>
+    <p>
+      Multiple values can be added at once to avoid creating a new version
+      for each added value.
+    </p>
+    <pre xml:space="preserve">
+      VSet<String> set1 = new VHashSet<String>("red", "orange", "yellow");
+      VSet<String> set2 = set.add("green", "blue", "purple");
+      // set2 contains all six colors.
+    </pre>
+    <p>
+      The following example demonstrates using a Map in a functional way.
+    </p>
+    <pre xml:space="preserve">
+      Add code example here!
+    </pre>
+
+    <h2>Performance</h2>
+    <p>
+      VMaps and VSets consume more memory than normal maps and sets
+      since they contain version/value chains instead of a single value
+      in each map entry.
+    </p>
+    <p>
+      Adding key/value pairs to VMaps and adding values to VSets
+      have similar performance to these operations on normal maps and sets.
+    </p>
+    <p>
+      Retrieving values from VMaps and
+      testing whether a values are contained in VSets
+      are slower than these operations on normal maps and sets.
+      This is because version/value chains must be searched
+      instead of simply accessing a single value in a map entry
+      as is done with normal maps and sets.
+    </p>
+    <p>
+      Clearing a VMap is much slower than clearing a normal map.
+      Explain why!
+    </p>
+    <p>
+      Like typical map implementations, performance will be poor
+      if hash code values of the keys used are not well-distributed.
+      This will cause the chains to become long
+      which will make lookups slower.
+    </p>
+
+    <h2>Generics</h2>
+    <p>
+      My initial implementation did not support Java generics.
+      VMaps and VSets could hold any type of object.
+      After getting the code to pass all my tests
+      I modified it to use generics so that VMaps and VSets
+      holding specific kinds of objects could be created.
+      The code was a thing of beauty before adding generics
+      and is less so now.  ;-)
+    </p>
+
+    <h2>Conclusion</h2>
     <p>
       Here is how to include blocks of code in the article using the
       &lt;pre&gt; tag:

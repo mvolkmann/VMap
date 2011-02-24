@@ -2,21 +2,59 @@ package com.ociweb.collection;
 
 import java.util.Iterator;
 
-public interface VSet<K> {
+/**
+ * Interface to a versioned, immutable set that provides methods for
+ * efficiently creating logical copies of the set.
+ * @author R. Mark Volkmann, Object Computing, Inc.
+ * @param <V> the value type
+ */
+public interface VSet<V> {
 
-    VSet<K> add(K... values);
+    /**
+     * Creates a new set containing the values in this set
+     * and one or more new values.
+     * @param values the new values
+     * @return the new set
+     */
+    VSet<V> add(V... values);
 
-    VSet<K> clear();
+    /**
+     * Determines whether a given value is a member of this set.
+     * @param value the value
+     * @return true if a member; false otherwise
+     */
+    boolean contains(V value);
 
-    boolean contains(K value);
+    /**
+     * Creates a new set containing the values in this set
+     * minus one or more given values.
+     * @param values the values
+     * @return the new set
+     */
+    VSet<V> delete(V... values);
 
-    VSet<K> delete(K... values);
-
+    /**
+     * Dumps the contents of this set to stdout
+     * in a form that is useful for debugging.
+     */
     void dump();
 
-    long getVersion();
+    /**
+     * Gets the version number of this set.
+     * This is mainly useful for debugging.
+     * @return the version number
+     */
+    int getVersionNumber();
 
-    Iterator<K> iterator();
+    /**
+     * Gets an iterator for iterating through the members of this set.
+     * @return the iterator
+     */
+    Iterator<V> iterator();
 
+    /**
+     * Gets the number of members in this set.
+     * @return the number of members
+     */
     int size();
 }

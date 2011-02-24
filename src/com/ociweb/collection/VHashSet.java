@@ -1,122 +1,153 @@
 package com.ociweb.collection;
 
-import java.util.BitSet;
+import com.ociweb.lang.MutableInteger;
 import java.util.Iterator;
 
-public class VHashSet<K> implements VSet<K> {
+/**
+ * A versioned, immutable hash set.
+ * @author R. Mark Volkmann, Object Computing, Inc.
+ * @param <V> the value type
+ */
+public class VHashSet<V> implements VSet<V> {
 
-    private BitSet versionSet;
-    private InternalMap<K, Boolean> map;
-    private int version;
+    private MutableInteger highestVersion = new MutableInteger();
+    private InternalSet<V> set;
+    private Version version;
+    //private VHashSet<V> parent; // TODO: Want this?
+    private int size;
 
-    public VHashSet() {}
+    /**
+     * Creates an empty VHashSet with the default initial capacity.
+     */
+    public VHashSet() {
+        version = new Version();
+        set = new InternalSet<V>(InternalSet.INITIAL_BUCKET_COUNT);
+    }
 
-    public VHashSet(K... values) {
-        map = new InternalMap<K, Boolean>(values.length);
+    /**
+     * Creates an empty VHashSet with a given initial capacity.
+     * @param initialCapacity the initial capacity
+     */
+    public VHashSet(int initialCapacity) {
+        version = new Version();
+        set = new InternalSet<V>(initialCapacity);
+    }
 
-        for (K value : values) {
-            log("ctor", "value", value);
-            map.put(version, value, true);
+    /**
+     * Creates a VHashSet with given compatible values.
+     * @param values any number of compatible values
+     */
+    public VHashSet(V... values) {
+        version = new Version();
+        size = values.length;
+        set = new InternalSet<V>(values.length);
+        set.add(version, values);
+    }
+
+    /**
+     * Creates the next version of a given VHashSet.
+     * @param parent the parent VHashSet to the new one
+     */
+    private VHashSet(VHashSet<V> parent) {
+        if (parent.version.number == Integer.MAX_VALUE) {
+            throw new VersionException();
         }
 
-        versionSet = new BitSet(1);
-        versionSet.set(version); // zero
-    }
+        synchronized (this) {
+            // Share internal set with parent version.
+            set = parent.set;
 
-    @Override
-    public final VSet<K> add(K... values) {
-        VHashSet<K> sis = copy();
-        for (K value : values) {
-            sis.map.put(sis.version, value, true);
-        }
-        return sis;
-    }
-
-    @Override
-    public VHashSet<K> clear() {
-        return new VHashSet<K>();
-    }
-
-    @Override
-    public boolean contains(K value) {
-        if (map == null) return false;
-        Boolean found = map.get(versionSet, value);
-        return found == null ? false : found;
-    }
-
-    private synchronized VHashSet<K> copy() {
-        VHashSet<K> sis = new VHashSet<K>();
-        sis.map = map == null ? new InternalMap<K, Boolean>() : map;
-        sis.version = version + 1;
-        sis.versionSet = new BitSet(sis.version);
-        if (versionSet != null) sis.versionSet.or(versionSet);
-        sis.versionSet.set(sis.version);
-        return sis;
-    }
-
-    @Override
-    public VSet<K> delete(K... values) {
-        VHashSet<K> sis = copy();
-        sis.map.delete(sis.version, values);
-        return sis;
-    }
-
-    @Override
-    public void dump() {
-        System.out.println("Set Dump:");
-        if (map == null) {
-            System.out.println("  empty");
-        } else {
-            map.dump();
+            size = parent.size;
+            highestVersion = parent.highestVersion;
+            version = new Version(highestVersion, parent.version);
+            //this.parent = parent;
         }
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public final synchronized VSet<V> add(V... values) {
+        VHashSet<V> newSet = new VHashSet<V>(this);
+        newSet.size += newSet.set.add(newSet.version, values);
+        return newSet;
+    }
+
+    @Override
+    public final synchronized boolean contains(V value) {
+        return set.contains(version, value);
+    }
+
+    @Override
+    public final synchronized VSet<V> delete(V... values) {
+        VHashSet<V> newSet = new VHashSet<V>(this);
+        int deleteCount = newSet.set.delete(newSet.version, values);
+        newSet.size -= deleteCount;
+        return newSet;
+    }
+
+    @Override
+    public final synchronized void dump() {
+        System.out.println("<<< start of VHashSetDump");
+        System.out.println(this);
+        set.dump();
+        System.out.println(">>> end of VHashSet dump");
+    }
+
+    /**
+     * Indicates whether some object is "equal" to this one.
+     * @param obj the object with which to compare
+     * @return true if equal; false otherwise
+     */
+    @Override
+    public final boolean equals(Object obj) {
         // Next line makes NetBeans happy.
         if (!(obj instanceof VHashSet)) return false;
         return obj == this;
     }
 
     @Override
-    public long getVersion() { return version; }
+    public final int getVersionNumber() { return version.number; }
 
+    /**
+     * Throws UnsupportedOperationException because
+     * VHashMap objects cannot be used as keys in hash tables.
+     */
     @Override
-    public int hashCode() {
+    public final int hashCode() {
         throw new UnsupportedOperationException(
-            "can't use as a key in a map or set");
+            "cannot use as a key in a map or set");
     }
 
     @Override
-    public Iterator<K> iterator() {
-        return new VHashSetIterator<K, Boolean>();
-    }
-
-    private void log(String method, Object msg) {
-        //System.out.println("VHashSet." + method + ": " + msg);
-    }
-
-    private void log(String method, String name, Object value) {
-        log(method, name + " = " + value);
+    public final Iterator<V> iterator() {
+        return new VHashSetIterator<V>();
     }
 
     @Override
-    public int size() { return map == null ? 0 : map.size(); }
+    public final int size() { return size; }
 
-    class VHashSetIterator<K, V> implements Iterator<K> {
+    /**
+     * Gets the string representation of this object.
+     * @return the string representation
+     */
+    @Override
+    public final String toString() {
+        return "VHashSet: " + version;
+    }
 
-        private Iterator<VMapEntry> iterator;
+    class VHashSetIterator<V> implements Iterator<V> {
 
-        VHashSetIterator() { iterator = map.iterator(); }
+        private Iterator<VSetEntry> iterator = set.iterator(version);
 
         @Override
+        // TODO: Failing to take version into account!
         public boolean hasNext() { return iterator.hasNext(); }
 
         @Override
-        public K next() {
+        // TODO: Failing to take version into account!
+        public V next() {
             @SuppressWarnings("unchecked")
-            VMapEntry<K, V> entry = iterator.next();
-            return entry == null ? null : entry.key;
+            VSetEntry<V> entry = iterator.next();
+            return entry == null ? null : entry.value;
         }
 
         @Override
