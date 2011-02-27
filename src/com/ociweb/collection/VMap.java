@@ -29,8 +29,9 @@ public interface VMap<K, V> {
     /**
      * Dumps the contents of this map to stdout
      * in a form that is useful for debugging.
+     * @param name to identify in debuggging output
      */
-    void dump();
+    void dump(String name);
 
     /**
      * Gets the value that corresponds to a given key in this map.

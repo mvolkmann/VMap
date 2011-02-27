@@ -18,25 +18,26 @@ class VSetEntry<V> {
         this.hashCode = value.hashCode();
     }
 
-    void add(Version version, boolean member) {
-        firstVM = new VersionMember(version.number, member, firstVM);
+    void add(int versionNumber, boolean member) {
+        firstVM = new VersionMember(versionNumber, member, firstVM);
     }
 
-    boolean contains(Version version) {
+    boolean contains(Version version, boolean member) {
         VersionMember vm = getVersionMember(version);
-        return vm != null && vm.member;
+        return vm != null && vm.member == member;
     }
 
-    private VersionMember getVersionMember(Version version) {
+    VersionMember getVersionMember(Version version) {
         VersionMember vm = firstVM;
         while (vm != null) {
-            if (vm.version == version.number) return vm;
+            if (vm.version == version.number)  return vm;
             if (vm.version < version.number &&
                 version.ancestors.get(vm.version)) {
                 return vm;
             }
             vm = vm.next;
         }
+
         return null;
     }
 

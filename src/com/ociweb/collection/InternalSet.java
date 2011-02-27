@@ -47,12 +47,16 @@ class InternalSet<V> {
         int bucketIndex = getBucketIndex(value);
 
         VSetEntry<V> entry = getEntry(bucketIndex, value);
+
         if (entry == null) {
+            // No entry was found for the value, so add one.
+
             // Get first entry in proper bucket.
             entry = buckets[bucketIndex];
 
             // Create new entry.
             entry = new VSetEntry<V>(value, entry);
+            entry.add(version.number, true);
 
             // Make it the first entry in the bucket.
             buckets[bucketIndex] = entry;
@@ -64,10 +68,18 @@ class InternalSet<V> {
             //if (loadFactor > LOAD_FACTOR_LIMIT) rehash();
             if (size > buckets.length) rehash();
         } else {
-            added = false;
-        }
+            // An entry was found for the value.
 
-        entry.add(version, true);
+            VersionMember vm = entry.getVersionMember(version);
+            // If it is marked as present in this version ...
+            if (vm.member) {
+                // There is no need to add it.
+                added = false;
+            } else {
+                // Make it present in this version.
+                entry.add(version.number, true);
+            }
+        }
 
         return added;
     }
@@ -97,7 +109,7 @@ class InternalSet<V> {
      */
     final synchronized boolean contains(Version version, V value) {
         VSetEntry<V> entry = getEntry(value);
-        return entry == null ? false : entry.contains(version);
+        return entry == null ? false : entry.contains(version, true);
     }
 
     /**
@@ -112,8 +124,8 @@ class InternalSet<V> {
 
         for (V value : values) {
             VSetEntry<V> entry = getEntry(value);
-            if (entry != null) {
-                entry.add(version, false);
+            if (entry != null && entry.contains(version, true)) {
+                entry.add(version.number, false);
                 size--;
                 deletedCount++;
             }
@@ -121,7 +133,6 @@ class InternalSet<V> {
 
         return deletedCount;
     }
-
 
     /**
      * Dumps the contents of this set to stdout
@@ -134,6 +145,8 @@ class InternalSet<V> {
         }
 
         for (int i = 0; i < buckets.length; i++) {
+            if (buckets[i] == null) continue;
+
             System.out.println("bucket " + i);
             VSetEntry<V> entry = buckets[i];
             if (entry == null) {
@@ -295,7 +308,7 @@ class InternalSet<V> {
 
         private void setNext() {
             next = next == null ?  map.getFirstEntry() : map.getNextEntry(next);
-            while (next != null && !next.contains(version)) {
+            while (next != null && !next.contains(version, true)) {
                 next = map.getNextEntry(next);
             }
         }

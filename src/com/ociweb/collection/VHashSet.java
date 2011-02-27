@@ -12,6 +12,7 @@ public class VHashSet<V> implements VSet<V> {
 
     private MutableInteger highestVersion = new MutableInteger();
     private InternalSet<V> set;
+    private Version unusedVersion;
     private Version version;
     //private VHashSet<V> parent; // TODO: Want this?
     private int size;
@@ -47,27 +48,32 @@ public class VHashSet<V> implements VSet<V> {
     /**
      * Creates the next version of a given VHashSet.
      * @param parent the parent VHashSet to the new one
+     * @param version the version of the new one
      */
-    private VHashSet(VHashSet<V> parent) {
-        if (parent.version.number == Integer.MAX_VALUE) {
-            throw new VersionException();
-        }
-
+    private VHashSet(VHashSet<V> parent, Version version) {
         synchronized (this) {
             // Share internal set with parent version.
             set = parent.set;
 
             size = parent.size;
             highestVersion = parent.highestVersion;
-            version = new Version(highestVersion, parent.version);
+            this.version = version;
             //this.parent = parent;
         }
     }
 
     @Override
     public final synchronized VSet<V> add(V... values) {
-        VHashSet<V> newSet = new VHashSet<V>(this);
-        newSet.size += newSet.set.add(newSet.version, values);
+        Version nextVersion = getNextVersion();
+        int addedCount = set.add(nextVersion, values);
+        if (addedCount == 0) {
+            unusedVersion = nextVersion;
+            return this;
+        }
+
+        VHashSet<V> newSet = new VHashSet<V>(this, nextVersion);
+        newSet.size += addedCount;
+        unusedVersion = null;
         return newSet;
     }
 
@@ -78,18 +84,25 @@ public class VHashSet<V> implements VSet<V> {
 
     @Override
     public final synchronized VSet<V> delete(V... values) {
-        VHashSet<V> newSet = new VHashSet<V>(this);
-        int deleteCount = newSet.set.delete(newSet.version, values);
-        newSet.size -= deleteCount;
+        Version nextVersion = getNextVersion();
+        int deletedCount = set.delete(nextVersion, values);
+        if (deletedCount == 0) {
+            unusedVersion = nextVersion;
+            return this;
+        }
+
+        VHashSet<V> newSet = new VHashSet<V>(this, nextVersion);
+        newSet.size -= deletedCount;
+        unusedVersion = null;
         return newSet;
     }
 
     @Override
-    public final synchronized void dump() {
-        System.out.println("<<< start of VHashSetDump");
+    public final synchronized void dump(String name) {
+        System.out.println("<<< start of VHashSet dump for " + name);
         System.out.println(this);
         set.dump();
-        System.out.println(">>> end of VHashSet dump");
+        System.out.println(">>> end of VHashSet dump for " + name + '\n');
     }
 
     /**
@@ -120,6 +133,12 @@ public class VHashSet<V> implements VSet<V> {
     @Override
     public final Iterator<V> iterator() {
         return new VHashSetIterator<V>();
+    }
+
+    private Version getNextVersion() {
+        if (unusedVersion != null) return unusedVersion;
+        if (version.number == Integer.MAX_VALUE) throw new VersionException();
+        return new Version(highestVersion, version);
     }
 
     @Override

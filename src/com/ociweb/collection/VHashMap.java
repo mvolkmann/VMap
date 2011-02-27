@@ -79,11 +79,11 @@ public class VHashMap<K, V> implements VMap<K, V> {
     }
 
     @Override
-    public final synchronized void dump() {
-        System.out.println("<<< start of VHashMapDump");
+    public final synchronized void dump(String name) {
+        System.out.println("<<< start of VHashMap dump of " + name);
         System.out.println(this);
         map.dump();
-        System.out.println(">>> end of VHashMap dump");
+        System.out.println(">>> end of VHashMap dump of " + name + '\n');
     }
 
     /**

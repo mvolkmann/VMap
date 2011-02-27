@@ -36,6 +36,10 @@ class Version {
 
     @Override
     public String toString() {
-        return "version: " + number + ", ancestors: " + ancestors;
+        String s = "version: " + number + ", ancestors:";
+        for (int i = 0; i <= number; i++) {
+            if (ancestors.get(i)) s += " " + i;
+        }
+        return s;
     }
 }
