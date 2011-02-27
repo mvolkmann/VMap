@@ -13,6 +13,7 @@ public class VHashMap<K, V> implements VMap<K, V> {
 
     private MutableInteger highestVersion = new MutableInteger();
     private InternalMap<K, V> map;
+    private Version unusedVersion;
     private Version version;
     //private VHashMap<K, V> parent; // TODO: Want this?
     private int size;
@@ -48,19 +49,16 @@ public class VHashMap<K, V> implements VMap<K, V> {
     /**
      * Creates the next version of a given VHashMap.
      * @param parent the parent VHashMap to the new one
+     * @param version the version of the new one
      */
-    private VHashMap(VHashMap<K, V> parent) {
-        if (parent.version.number == Integer.MAX_VALUE) {
-            throw new VersionException();
-        }
-
+    private VHashMap(VHashMap<K, V> parent, Version version) {
         synchronized (this) {
             // Share internal map with parent version.
             map = parent.map;
 
             size = parent.size;
             highestVersion = parent.highestVersion;
-            version = new Version(highestVersion, parent.version);
+            this.version = version;
             //this.parent = parent;
         }
     }
@@ -72,9 +70,16 @@ public class VHashMap<K, V> implements VMap<K, V> {
 
     @Override
     public final synchronized VMap<K, V> delete(K... keys) {
-        VHashMap<K, V> newMap = new VHashMap<K, V>(this);
-        int deleteCount = newMap.map.delete(newMap.version, keys);
-        newMap.size -= deleteCount;
+        Version nextVersion = getNextVersion();
+        int deletedCount = map.delete(nextVersion, keys);
+        if (deletedCount == 0) {
+            unusedVersion = nextVersion;
+            return this;
+        }
+
+        VHashMap<K, V> newMap = new VHashMap<K, V>(this, nextVersion);
+        newMap.size -= deletedCount;
+        unusedVersion = null;
         return newMap;
     }
 
@@ -103,6 +108,12 @@ public class VHashMap<K, V> implements VMap<K, V> {
         return map.get(version, key);
     }
 
+    private Version getNextVersion() {
+        if (unusedVersion != null) return unusedVersion;
+        if (version.number == Integer.MAX_VALUE) throw new VersionException();
+        return new Version(highestVersion, version);
+    }
+
     @Override
     public final int getVersionNumber() { return version.number; }
 
@@ -123,16 +134,31 @@ public class VHashMap<K, V> implements VMap<K, V> {
 
     @Override
     public final synchronized VMap<K, V> put(K key, V value) {
-        VHashMap<K, V> newMap = new VHashMap<K, V>(this);
-        boolean added = newMap.map.put(newMap.version, key, value);
-        if (added) newMap.size++;
+        Version nextVersion = getNextVersion();
+        InternalMap.PutAction putAction = map.put(nextVersion, key, value);
+        if (putAction == InternalMap.PutAction.NONE) {
+            unusedVersion = nextVersion;
+            return this;
+        }
+
+        VHashMap<K, V> newMap = new VHashMap<K, V>(this, nextVersion);
+        if (putAction == InternalMap.PutAction.ADDED_ENTRY) newMap.size++;
+        unusedVersion = null;
         return newMap;
     }
 
     @Override
     public final synchronized VMap<K, V> put(Pair<K, V>... pairs) {
-        VHashMap<K, V> newMap = new VHashMap<K, V>(this);
-        newMap.size += newMap.map.put(newMap.version, pairs);
+        Version nextVersion = getNextVersion();
+        int addedCount = map.put(nextVersion, pairs);
+        if (addedCount == 0) {
+            unusedVersion = nextVersion;
+            return this;
+        }
+
+        VHashMap<K, V> newMap = new VHashMap<K, V>(this, nextVersion);
+        newMap.size += addedCount;
+        unusedVersion = null;
         return newMap;
     }
 
@@ -145,7 +171,7 @@ public class VHashMap<K, V> implements VMap<K, V> {
      */
     @Override
     public final String toString() {
-        return "VHashMap: " + version;
+        return "VHashMap: " + version + ", size=" + size;
     }
 
     @Override

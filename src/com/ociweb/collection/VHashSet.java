@@ -117,6 +117,12 @@ public class VHashSet<V> implements VSet<V> {
         return obj == this;
     }
 
+    private Version getNextVersion() {
+        if (unusedVersion != null) return unusedVersion;
+        if (version.number == Integer.MAX_VALUE) throw new VersionException();
+        return new Version(highestVersion, version);
+    }
+
     @Override
     public final int getVersionNumber() { return version.number; }
 
@@ -135,12 +141,6 @@ public class VHashSet<V> implements VSet<V> {
         return new VHashSetIterator<V>();
     }
 
-    private Version getNextVersion() {
-        if (unusedVersion != null) return unusedVersion;
-        if (version.number == Integer.MAX_VALUE) throw new VersionException();
-        return new Version(highestVersion, version);
-    }
-
     @Override
     public final int size() { return size; }
 
@@ -150,7 +150,7 @@ public class VHashSet<V> implements VSet<V> {
      */
     @Override
     public final String toString() {
-        return "VHashSet: " + version;
+        return "VHashSet: " + version + ", size=" + size;
     }
 
     class VHashSetIterator<V> implements Iterator<V> {

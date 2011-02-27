@@ -19,13 +19,13 @@ class VMapEntry<K, V> {
         this.hashCode = key.hashCode();
     }
 
-    void addValue(Version version, V value) {
-        firstVV = new VersionValue<V>(version.number, value, firstVV);
+    void addValue(int versionNumber, V value) {
+        firstVV = new VersionValue<V>(versionNumber, value, firstVV);
     }
 
     boolean contains(Version version) {
         VersionValue vv = getVersionValue(version);
-        return vv != null;
+        return vv != null && vv.value != null;
     }
 
     V getValue(Version version) {
@@ -33,7 +33,7 @@ class VMapEntry<K, V> {
         return vv == null ? null : vv.value;
     }
 
-    private VersionValue<V> getVersionValue(Version version) {
+    VersionValue<V> getVersionValue(Version version) {
         VersionValue<V> vv = firstVV;
         while (vv != null) {
             if (vv.version == version.number) return vv;
@@ -43,6 +43,7 @@ class VMapEntry<K, V> {
             }
             vv = vv.next;
         }
+
         return null;
     }
 
@@ -56,7 +57,7 @@ class VMapEntry<K, V> {
 
         VersionValue vv = firstVV;
         while (vv != null) {
-            sb.append("\n    ").append(vv.version);
+            sb.append("\n    ").append(vv);
             vv = vv.next;
         }
 

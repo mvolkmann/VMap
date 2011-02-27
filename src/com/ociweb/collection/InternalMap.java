@@ -11,6 +11,8 @@ import java.util.Iterator;
  */
 class InternalMap<K, V> {
 
+    enum PutAction { NONE, ADDED_ENTRY, ADDED_VALUE };
+
     //private static final float LOAD_FACTOR_LIMIT = 0.75f;
     static final int INITIAL_BUCKET_COUNT = 11;
 
@@ -62,7 +64,7 @@ class InternalMap<K, V> {
         for (K key : keys) {
             VMapEntry<K, V> entry = getEntry(key);
             if (entry != null) {
-                entry.addValue(version, null);
+                entry.addValue(version.number, null);
                 size--;
                 deletedCount++;
             }
@@ -82,6 +84,8 @@ class InternalMap<K, V> {
         }
 
         for (int i = 0; i < buckets.length; i++) {
+            if (buckets[i] == null) continue;
+
             System.out.println("bucket " + i);
             VMapEntry<K, V> entry = buckets[i];
             if (entry == null) {
@@ -194,18 +198,20 @@ class InternalMap<K, V> {
      * @return true if a new entry was added;
      *         false if the value of an existing entry was changed
      */
-    final synchronized boolean put(Version version, K key, V value) {
-        boolean added = true; // assume
+    final synchronized PutAction put(Version version, K key, V value) {
+        PutAction putAction;
 
         int bucketIndex = getBucketIndex(key);
-
         VMapEntry<K, V> entry = getEntry(bucketIndex, key);
         if (entry == null) {
+            // No entry was found for the key, so add one.
+
             // Get first entry in proper bucket.
             entry = buckets[bucketIndex];
 
             // Create new entry.
             entry = new VMapEntry<K, V>(key, entry);
+            entry.addValue(version.number, value);
 
             // Make it the first entry in the bucket.
             buckets[bucketIndex] = entry;
@@ -216,13 +222,24 @@ class InternalMap<K, V> {
             //float loadFactor = ((float) size) / buckets.length;
             //if (loadFactor > LOAD_FACTOR_LIMIT) rehash();
             if (size > buckets.length) rehash();
+
+            putAction = PutAction.ADDED_ENTRY;
         } else {
-            added = false;
+            // An entry was found for the value.
+
+            VersionValue vv = entry.getVersionValue(version);
+            // If the value being added is already the value in this version ...
+            if (value == vv.value || value.equals(vv.value)) {
+                // There is no need to add it.
+                putAction = PutAction.NONE;
+            } else {
+                // Make it present in this version.
+                entry.addValue(version.number, value);
+                putAction = PutAction.ADDED_VALUE;
+            }
         }
 
-        entry.addValue(version, value);
-
-        return added;
+        return putAction;
     }
 
     /**
@@ -232,7 +249,8 @@ class InternalMap<K, V> {
         int addedCount = 0;
 
         for (Pair<K, V> pair : pairs) {
-            if (put(version, pair.key, pair.value)) addedCount++;
+            PutAction putAction = put(version, pair.key, pair.value);
+            if (putAction == PutAction.ADDED_ENTRY) addedCount++;
         }
 
         return addedCount;

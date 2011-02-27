@@ -10,12 +10,6 @@ class VersionValue<V> {
     final V value;
     final int version;
 
-    VersionValue(int version, VersionValue<V> next) {
-        this.version = version;
-        this.value = null;
-        this.next = next;
-    }
-
     VersionValue(int version, V value, VersionValue<V> next) {
         this.version = version;
         this.value = value;

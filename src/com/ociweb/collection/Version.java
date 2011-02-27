@@ -36,10 +36,13 @@ class Version {
 
     @Override
     public String toString() {
-        String s = "version: " + number + ", ancestors:";
+        StringBuilder sb = new StringBuilder();
+        sb.append("version: ").append(number).append(", ancestors:");
+
         for (int i = 0; i <= number; i++) {
-            if (ancestors.get(i)) s += " " + i;
+            if (ancestors.get(i)) sb.append(" ").append(i);
         }
-        return s;
+
+        return sb.toString();
     }
 }

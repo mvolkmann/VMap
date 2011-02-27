@@ -45,9 +45,7 @@ class InternalSet<V> {
         boolean added = true; // assume
 
         int bucketIndex = getBucketIndex(value);
-
         VSetEntry<V> entry = getEntry(bucketIndex, value);
-
         if (entry == null) {
             // No entry was found for the value, so add one.
 
