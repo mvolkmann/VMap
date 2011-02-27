@@ -40,9 +40,8 @@ public class VHashSet<V> implements VSet<V> {
      */
     public VHashSet(V... values) {
         version = new Version();
-        size = values.length;
         set = new InternalSet<V>(values.length);
-        set.add(version, values);
+        size = set.add(version, values);
     }
 
     /**

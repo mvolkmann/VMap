@@ -14,7 +14,7 @@ class InternalSet<V> {
     static final int INITIAL_BUCKET_COUNT = 11;
 
     private VSetEntry<V>[] buckets;
-    private int size;
+    private int entryCount;
 
     /**
      * Creates an InternalSet with the default initial capacity.
@@ -59,12 +59,12 @@ class InternalSet<V> {
             // Make it the first entry in the bucket.
             buckets[bucketIndex] = entry;
 
-            size++;
+            entryCount++;
 
             // The performance test for VHashSet does worse using load factor.
             //float loadFactor = ((float) size) / buckets.length;
             //if (loadFactor > LOAD_FACTOR_LIMIT) rehash();
-            if (size > buckets.length) rehash();
+            if (entryCount > buckets.length) rehash();
         } else {
             // An entry was found for the value.
 
@@ -124,7 +124,6 @@ class InternalSet<V> {
             VSetEntry<V> entry = getEntry(value);
             if (entry != null && entry.contains(version, true)) {
                 entry.add(version.number, false);
-                size--;
                 deletedCount++;
             }
         }
@@ -274,7 +273,7 @@ class InternalSet<V> {
 
     @Override
     public final String toString() {
-        return "InternalSet with " + size + " entries";
+        return "InternalSet with " + entryCount + " entries";
     }
 
     static class MyIterator<V> implements Iterator<VSetEntry> {

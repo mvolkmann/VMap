@@ -41,9 +41,8 @@ public class VHashMap<K, V> implements VMap<K, V> {
      */
     public VHashMap(Pair<K, V>... pairs) {
         version = new Version();
-        size = pairs.length;
-        map = new InternalMap<K, V>(size);
-        map.put(version, pairs);
+        map = new InternalMap<K, V>(pairs.length);
+        size = map.put(version, pairs);
     }
 
     /**

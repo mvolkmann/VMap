@@ -11,13 +11,24 @@ import java.util.Iterator;
  */
 class InternalMap<K, V> {
 
+    /**
+     * When adding a value key/value pair there are three possible outcomes.
+     * <ol>
+     *   <li>NONE means the key was already present
+     *    with the given value for the given version, so nothing was added.</li>
+     *   <li>ADDED_ENTRY means the key was not present
+     *     and a new entry was added.</li>
+     *   <li>ADDED_VALUE means the key was present, but had a
+     *    different value for the given version, so a new value was added.</li>
+     * </ol>
+     */
     enum PutAction { NONE, ADDED_ENTRY, ADDED_VALUE };
 
     //private static final float LOAD_FACTOR_LIMIT = 0.75f;
     static final int INITIAL_BUCKET_COUNT = 11;
 
     private VMapEntry<K, V>[] buckets;
-    private int size;
+    private int entryCount;
 
     /**
      * Creates an InternalMap with the default initial capacity.
@@ -65,7 +76,6 @@ class InternalMap<K, V> {
             VMapEntry<K, V> entry = getEntry(key);
             if (entry != null) {
                 entry.addValue(version.number, null);
-                size--;
                 deletedCount++;
             }
         }
@@ -216,12 +226,12 @@ class InternalMap<K, V> {
             // Make it the first entry in the bucket.
             buckets[bucketIndex] = entry;
 
-            size++;
+            entryCount++;
 
             // The performance test for VHashSet does worse using load factor.
             //float loadFactor = ((float) size) / buckets.length;
             //if (loadFactor > LOAD_FACTOR_LIMIT) rehash();
-            if (size > buckets.length) rehash();
+            if (entryCount > buckets.length) rehash();
 
             putAction = PutAction.ADDED_ENTRY;
         } else {
@@ -294,7 +304,7 @@ class InternalMap<K, V> {
 
     @Override
     public final String toString() {
-        return "InternalMap with " + size + " entries";
+        return "InternalMap with " + entryCount + " entries";
     }
 
     static class MyIterator<K, V> implements Iterator<VMapEntry> {
