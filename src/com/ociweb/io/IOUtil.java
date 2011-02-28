@@ -9,6 +9,9 @@ import java.io.Reader;
  */
 public class IOUtil {
 
+    /**
+     * Instances of this class cannot be created.
+     */
     private IOUtil() {}
 
     /**

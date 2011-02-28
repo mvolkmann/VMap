@@ -6,6 +6,9 @@ package com.ociweb.lang;
  */
 public class MutableInteger {
 
+    /**
+     * Can access directly to get and set the value.
+     */
     public int value;
 
     /**

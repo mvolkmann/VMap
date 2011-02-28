@@ -4,10 +4,10 @@ import com.ociweb.lang.MutableInteger;
 import java.util.Iterator;
 
 /**
- * A versioned, immutable hash map.
- * @author R. Mark Volkmann, Object Computing, Inc.
+ * A versioned, logically immutable hash map.
  * @param <K> the key type
  * @param <V> the value type
+ * @author R. Mark Volkmann, Object Computing, Inc.
  */
 public class VHashMap<K, V> implements VMap<K, V> {
 
@@ -62,11 +62,13 @@ public class VHashMap<K, V> implements VMap<K, V> {
         }
     }
 
+    // Javadoc comes from the VMap interface.
     @Override
     public final synchronized boolean containsKey(K key) {
         return map.contains(version, key);
     }
 
+    // Javadoc comes from the VMap interface.
     @Override
     public final synchronized VMap<K, V> delete(K... keys) {
         Version nextVersion = getNextVersion();
@@ -82,6 +84,7 @@ public class VHashMap<K, V> implements VMap<K, V> {
         return newMap;
     }
 
+    // Javadoc comes from the VMap interface.
     @Override
     public final synchronized void dump(String name) {
         System.out.println("<<< start of VHashMap dump of " + name);
@@ -107,12 +110,17 @@ public class VHashMap<K, V> implements VMap<K, V> {
         return map.get(version, key);
     }
 
+    /**
+     * Gets the next version of this set that can be created.
+     * @return the Version
+     */
     private Version getNextVersion() {
         if (unusedVersion != null) return unusedVersion;
         if (version.number == Integer.MAX_VALUE) throw new VersionException();
         return new Version(highestVersion, version);
     }
 
+    // Javadoc comes from the VMap interface.
     @Override
     public final int getVersionNumber() { return version.number; }
 
@@ -126,11 +134,13 @@ public class VHashMap<K, V> implements VMap<K, V> {
             "cannot use as a key in a map or set");
     }
 
+    // Javadoc comes from the VMap interface.
     @Override
     public final Iterator<K> keyIterator() {
         return new KeyIterator<K>();
     }
 
+    // Javadoc comes from the VMap interface.
     @Override
     public final synchronized VMap<K, V> put(K key, V value) {
         Version nextVersion = getNextVersion();
@@ -146,6 +156,7 @@ public class VHashMap<K, V> implements VMap<K, V> {
         return newMap;
     }
 
+    // Javadoc comes from the VMap interface.
     @Override
     public final synchronized VMap<K, V> put(Pair<K, V>... pairs) {
         Version nextVersion = getNextVersion();
@@ -161,6 +172,7 @@ public class VHashMap<K, V> implements VMap<K, V> {
         return newMap;
     }
 
+    // Javadoc comes from the VMap interface.
     @Override
     public final int size() { return size; }
 
@@ -178,33 +190,54 @@ public class VHashMap<K, V> implements VMap<K, V> {
         return new ValueIterator<V>();
     }
 
+    /**
+     * An Iterator for iterating through the keys of this map.
+     * @param <K> the key type
+     */
     class KeyIterator<K> implements Iterator<K> {
 
         private Iterator<VMapEntry> iterator = map.iterator(version);
 
+        /**
+         * Determines whether that is another key to visit.
+         * @return true if so; false otherwise
+         */
         @Override
-        // TODO: Failing to take version into account!
         public boolean hasNext() { return iterator.hasNext(); }
 
         @Override
-        // TODO: Failing to take version into account!
         public K next() {
             @SuppressWarnings("unchecked")
             VMapEntry<K, V> entry = iterator.next();
             return entry == null ? null : entry.key;
         }
 
+        /**
+         * Removing entries from this iterator is not supported.
+         */
         @Override
         public void remove() { iterator.remove(); }
     }
 
+    /**
+     * An Iterator for iterating through the values of this map.
+     * @param <V> the value type
+     */
     class ValueIterator<V> implements Iterator<V> {
 
         private Iterator<VMapEntry> iterator = map.iterator(version);
 
+        /**
+         * Determines whether that is another value to visit.
+         * @return true if so; false otherwise
+         */
         @Override
         public boolean hasNext() { return iterator.hasNext(); }
 
+        /**
+         * Gets the next value.
+         * @return the next value
+         */
         @Override
         public V next() {
             @SuppressWarnings("unchecked")
@@ -212,6 +245,9 @@ public class VHashMap<K, V> implements VMap<K, V> {
             return entry == null ? null : entry.getValue(version);
         }
 
+        /**
+         * Removing entries from this iterator is not supported.
+         */
         @Override
         public void remove() { iterator.remove(); }
     }

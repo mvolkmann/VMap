@@ -4,7 +4,7 @@ import com.ociweb.lang.MutableInteger;
 import java.util.Iterator;
 
 /**
- * A versioned, immutable hash set.
+ * A versioned, logically immutable hash set.
  * @author R. Mark Volkmann, Object Computing, Inc.
  * @param <V> the value type
  */
@@ -61,6 +61,7 @@ public class VHashSet<V> implements VSet<V> {
         }
     }
 
+    // Javadoc comes from the VSet interface.
     @Override
     public final synchronized VSet<V> add(V... values) {
         Version nextVersion = getNextVersion();
@@ -76,11 +77,14 @@ public class VHashSet<V> implements VSet<V> {
         return newSet;
     }
 
+    // Javadoc comes from the VSet interface.
     @Override
     public final synchronized boolean contains(V value) {
         return set.contains(version, value);
     }
 
+
+    // Javadoc comes from the VSet interface.
     @Override
     public final synchronized VSet<V> delete(V... values) {
         Version nextVersion = getNextVersion();
@@ -96,6 +100,7 @@ public class VHashSet<V> implements VSet<V> {
         return newSet;
     }
 
+    // Javadoc comes from the VSet interface.
     @Override
     public final synchronized void dump(String name) {
         System.out.println("<<< start of VHashSet dump for " + name);
@@ -116,12 +121,17 @@ public class VHashSet<V> implements VSet<V> {
         return obj == this;
     }
 
+    /**
+     * Gets the next version of this set that can be created.
+     * @return the Version
+     */
     private Version getNextVersion() {
         if (unusedVersion != null) return unusedVersion;
         if (version.number == Integer.MAX_VALUE) throw new VersionException();
         return new Version(highestVersion, version);
     }
 
+    // Javadoc comes from the VSet interface.
     @Override
     public final int getVersionNumber() { return version.number; }
 
@@ -135,11 +145,13 @@ public class VHashSet<V> implements VSet<V> {
             "cannot use as a key in a map or set");
     }
 
+    // Javadoc comes from the VSet interface.
     @Override
     public final Iterator<V> iterator() {
         return new VHashSetIterator<V>();
     }
 
+    // Javadoc comes from the VSet interface.
     @Override
     public final int size() { return size; }
 
@@ -152,22 +164,35 @@ public class VHashSet<V> implements VSet<V> {
         return "VHashSet: " + version + ", size=" + size;
     }
 
+    /**
+     * An Iterator for iterating through the values of this set.
+     * @param <V> the value type
+     */
     class VHashSetIterator<V> implements Iterator<V> {
 
         private Iterator<VSetEntry> iterator = set.iterator(version);
 
+        /**
+         * Determines whether that is another value to visit.
+         * @return true if so; false otherwise
+         */
         @Override
-        // TODO: Failing to take version into account!
         public boolean hasNext() { return iterator.hasNext(); }
 
+        /**
+         * Gets the next value.
+         * @return the next value
+         */
         @Override
-        // TODO: Failing to take version into account!
         public V next() {
             @SuppressWarnings("unchecked")
             VSetEntry<V> entry = iterator.next();
             return entry == null ? null : entry.value;
         }
 
+        /**
+         * Removing entries from this iterator is not supported.
+         */
         @Override
         public void remove() { iterator.remove(); }
     }

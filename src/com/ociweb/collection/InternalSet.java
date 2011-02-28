@@ -199,8 +199,6 @@ class InternalSet<V> {
             if (entry.value.equals(value)) return entry;
             entry = entry.next;
         }
-
-        //System.out.println("InternalSet.getEntry: not found");
         return null;
     }
 
@@ -210,6 +208,11 @@ class InternalSet<V> {
      */
     private VSetEntry<V> getFirstEntry() { return getNextEntry(0); }
 
+    /**
+     * Gets the first entry object in this set after a given one.
+     * @param prev the previous entry
+     * @return the next VSetEntry
+     */
     private VSetEntry<V> getNextEntry(VSetEntry<V> prev) {
         VSetEntry<V> next = prev.next;
         if (next != null) return next;
@@ -218,6 +221,11 @@ class InternalSet<V> {
         return getNextEntry(bucketIndex + 1);
     }
 
+    /**
+     * Gets the next entry object in this set starting at a given bucket.
+     * @param bucketIndex the bucket index
+     * @return the next VSetEntry
+     */
     private VSetEntry<V> getNextEntry(int bucketIndex) {
         while (bucketIndex < buckets.length) {
             VSetEntry<V> next = buckets[bucketIndex];
@@ -229,12 +237,19 @@ class InternalSet<V> {
     }
 
     /**
-     * Iterates through the VSetEntry objects in this InternalSet.
+     * Gets an Iterator for iterating through the VSetEntry objects
+     * in a given version of this set.
+     * @param version the Version
+     * @return the Iterator
      */
     final Iterator<VSetEntry> iterator(Version version) {
         return new MyIterator<V>(version, this);
     }
 
+    /**
+     * Rehashes this set by increasing the number of buckets and
+     * redistributing the set entries.
+     */
     final synchronized void rehash() {
         int newBucketCount = (buckets.length * 2) + 1;
 
@@ -271,26 +286,47 @@ class InternalSet<V> {
         buckets = newBuckets; // Previous buckets will be GCed.
     }
 
+    /**
+     * Gets the string representation of this object
+     * @return the string representation
+     */
     @Override
     public final String toString() {
         return "InternalSet with " + entryCount + " entries";
     }
 
+    /**
+     * An Iterator for iterating through the entries in a given set.
+     * @param <V> the value type
+     */
     static class MyIterator<V> implements Iterator<VSetEntry> {
 
-        InternalSet<V> map;
+        InternalSet<V> set;
         Version version;
         VSetEntry<V> next;
 
-        MyIterator(Version version, InternalSet<V> map) {
+        /**
+         * Creates an iterator for a given version of a given set.
+         * @param version the Version
+         * @param set the InternalSet
+         */
+        MyIterator(Version version, InternalSet<V> set) {
             this.version = version;
-            this.map = map;
+            this.set = set;
             setNext();
         }
 
+        /**
+         * Determines whether that is another entry to visit.
+         * @return true if so; false otherwise
+         */
         @Override
         public boolean hasNext() { return next != null; }
 
+        /**
+         * Gets the next entry.
+         * @return the next entry
+         */
         @Override
         public VSetEntry<V> next() {
             VSetEntry<V> result = next;
@@ -303,10 +339,13 @@ class InternalSet<V> {
             throw new UnsupportedOperationException("can't remove elements");
         }
 
+        /**
+         * Sets the next entry that will be returned by the next method.
+         */
         private void setNext() {
-            next = next == null ?  map.getFirstEntry() : map.getNextEntry(next);
+            next = next == null ?  set.getFirstEntry() : set.getNextEntry(next);
             while (next != null && !next.contains(version, true)) {
-                next = map.getNextEntry(next);
+                next = set.getNextEntry(next);
             }
         }
     }

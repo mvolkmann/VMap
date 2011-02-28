@@ -3,8 +3,8 @@ package com.ociweb.collection;
 import java.util.Iterator;
 
 /**
- * Interface to a versioned, immutable map that provides methods for
- * efficiently creating logical copies of the map.
+ * Interface to a versioned, logically immutable map
+ * that provides methods for efficiently creating logical copies of the map.
  * @author R. Mark Volkmann, Object Computing, Inc.
  * @param <K> the key type
  * @param <V> the value type

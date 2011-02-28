@@ -140,7 +140,7 @@ class InternalMap<K, V> {
 
     /**
      * Gets the entry object for a given key.
-     * @param value the value
+     * @param key the key
      * @return the VMapEntry
      */
     private VMapEntry<K, V> getEntry(K key) {
@@ -151,12 +151,10 @@ class InternalMap<K, V> {
     /**
      * Gets the entry object for a given bucket index and value.
      * @param bucketIndex the bucket index
-     * @param value the value
+     * @param key the key
      * @return the VMapEntry
      */
-    private VMapEntry<K, V> getEntry(
-        int bucketIndex, K key) {
-
+    private VMapEntry<K, V> getEntry(int bucketIndex, K key) {
         VMapEntry<K, V> entry = buckets[bucketIndex];
         while (entry != null) {
             // TODO: Is it faster to only compare keys?
@@ -164,8 +162,6 @@ class InternalMap<K, V> {
             if (entry.key.equals(key)) return entry;
             entry = entry.next;
         }
-
-        //System.out.println("InternalMap.getEntry: not found");
         return null;
     }
 
@@ -173,13 +169,14 @@ class InternalMap<K, V> {
      * Gets the first entry object in this map.
      * @return the first VMapEntry
      */
-    private VMapEntry<K, V> getFirstEntry() {
-        return getNextEntry(0);
-    }
+    private VMapEntry<K, V> getFirstEntry() { return getNextEntry(0); }
 
-    final synchronized VMapEntry<K, V> getNextEntry(
-        VMapEntry<K, V> prev) {
-
+    /**
+     * Gets the next entry object in this map after a given one.
+     * @param prev the previous entry
+     * @return the next VMapEntry
+     */
+    final synchronized VMapEntry<K, V> getNextEntry(VMapEntry<K, V> prev) {
         VMapEntry<K, V> next = prev.next;
         if (next != null) return next;
 
@@ -187,6 +184,11 @@ class InternalMap<K, V> {
         return getNextEntry(bucketIndex + 1);
     }
 
+    /**
+     * Gets the next entry object in this map starting at a given bucket.
+     * @param bucketIndex the bucket index
+     * @return the next VMapEntry
+     */
     private VMapEntry<K, V> getNextEntry(int bucketIndex) {
         while (bucketIndex < buckets.length) {
             VMapEntry<K, V> next = buckets[bucketIndex];
@@ -198,15 +200,21 @@ class InternalMap<K, V> {
     }
 
     /**
-     * Iterates through the VMapEntry objects in this InternalMap.
+     * Gets an Iterator for iterating through the VMapEntry objects
+     * in a given version of this set.
+     * @param version the Version
+     * @return the Iterator
      */
     final Iterator<VMapEntry> iterator(Version version) {
         return new MyIterator<K, V>(version, this);
     }
 
     /**
-     * @return true if a new entry was added;
-     *         false if the value of an existing entry was changed
+     * Adds a key/value pair to a given version of this map.
+     * @param version the Version
+     * @param key the key
+     * @param value the value
+     * @return the PutAction that was taken
      */
     final synchronized PutAction put(Version version, K key, V value) {
         PutAction putAction;
@@ -253,6 +261,9 @@ class InternalMap<K, V> {
     }
 
     /**
+     * Adds any number of key/value pairs to a given version of this map.
+     * @param version the Version
+     * @param pairs the key/value pairs
      * @return the number of entries that were added
      */
     final synchronized int put(Version version, Pair<K, V>... pairs) {
@@ -266,6 +277,10 @@ class InternalMap<K, V> {
         return addedCount;
     }
 
+    /**
+     * Rehashes this map by increasing the number of buckets and
+     * redistributing the map entries.
+     */
     final synchronized void rehash() {
         int newBucketCount = (buckets.length * 2) + 1;
 
@@ -302,26 +317,48 @@ class InternalMap<K, V> {
         buckets = newBuckets; // Previous buckets will be GCed.
     }
 
+    /**
+     * Gets the string representation of this object
+     * @return the string representation
+     */
     @Override
     public final String toString() {
         return "InternalMap with " + entryCount + " entries";
     }
 
+    /**
+     * An Iterator for iterating through the entries in a given map.
+     * @param <K> the key type
+     * @param <V> the value type
+     */
     static class MyIterator<K, V> implements Iterator<VMapEntry> {
 
         InternalMap<K, V> map;
         Version version;
         VMapEntry<K, V> next;
 
+        /**
+         * Creates an iterator for a given version of a given map.
+         * @param version the Version
+         * @param map the InternalMap
+         */
         MyIterator(Version version, InternalMap<K, V> map) {
             this.version = version;
             this.map = map;
             setNext();
         }
 
+        /**
+         * Determines whether that is another entry to visit.
+         * @return true if so; false otherwise
+         */
         @Override
         public boolean hasNext() { return next != null; }
 
+        /**
+         * Gets the next entry.
+         * @return the next entry
+         */
         @Override
         public VMapEntry<K, V> next() {
             VMapEntry<K, V> result = next;
@@ -329,11 +366,17 @@ class InternalMap<K, V> {
             return result;
         }
 
+        /**
+         * Removing entries from this iterator is not supported.
+         */
         @Override
         public void remove() {
             throw new UnsupportedOperationException("can't remove elements");
         }
 
+        /**
+         * Sets the next entry that will be returned by the next method.
+         */
         private void setNext() {
             next = next == null ?  map.getFirstEntry() : map.getNextEntry(next);
             while (next != null && !next.contains(version)) {

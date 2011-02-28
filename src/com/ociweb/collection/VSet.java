@@ -3,8 +3,8 @@ package com.ociweb.collection;
 import java.util.Iterator;
 
 /**
- * Interface to a versioned, immutable set that provides methods for
- * efficiently creating logical copies of the set.
+ * Interface to a versioned, logically immutable set
+ * that provides methods for efficiently creating logical copies of the set.
  * @author R. Mark Volkmann, Object Computing, Inc.
  * @param <V> the value type
  */

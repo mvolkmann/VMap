@@ -74,7 +74,8 @@
     <delete dir="doc/api"/>
     <mkdir dir="doc/api"/>
     <javadoc sourcepath="src" destdir="doc/api"
-      classpathref="classpath"/>
+      classpathref="classpath"
+      private="yes"/> <!-- TODO: Set private to "no" for production. -->
     <antcall target="browse">
       <param name="file.path" value="doc/api/index.html"/>
     </antcall>

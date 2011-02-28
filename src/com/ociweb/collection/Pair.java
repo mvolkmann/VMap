@@ -2,9 +2,9 @@ package com.ociweb.collection;
 
 /**
  * Holds a key/value pair.
- * @author R. Mark Volkmann, Object Computing, Inc.
  * @param <K> the key type
  * @param <V> the value type
+ * @author R. Mark Volkmann, Object Computing, Inc.
  */
 public class Pair<K, V> {
     public final K key;
