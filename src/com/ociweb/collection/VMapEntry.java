@@ -67,6 +67,22 @@ class VMapEntry<K, V> {
     }
 
     /**
+     * Gets the number of stored values for this entry.
+     * @return the number of stored values
+     */
+    int getValueListLength() {
+        int length = 0;
+
+        VersionValue<V> vv = firstVV;
+        while (vv != null) {
+            length++;
+            vv = vv.next;
+        }
+
+        return length;
+    }
+
+    /**
      * Gets the VersionValue object for a given version in this entry.
      * @param version the Version
      * @return the VersionValue or null if not found

@@ -184,7 +184,7 @@
     </p>
     <p>
       Another name for "hash table" is "hash map"
-      and many people simply use the term "map.
+      and many people simply use the term "map".
       Likewise, many people refer to a "hash set" simply as a "set".
       So that's what I'll do in this article.
     </p>
@@ -520,18 +520,18 @@ START HERE
       // map1 only contains the key "foo".
 
       VMap<String, Integer> map2 = map1.put("bar", 2);
-      // map0 is still emtpy.
+      // map0 is still empty.
       // map1 still only contains the key "foo".
       // map2 contains the keys "foo" and "bar".
 
       VMap<String, Integer> map3 = map2.delete("foo");
-      // map0 is still emtpy.
+      // map0 is still empty.
       // map1 still only contains the key "foo".
       // map2 still contains the keys "foo" and "bar".
       // map3 only contains the key "bar".
 
       VMap<String, Integer> map4 = map3.put("bar", 3);
-      // map0 is still emtpy.
+      // map0 is still empty.
       // map1 still only contains the key "foo".
       // map2 still contains the keys "foo" and "bar".
       // map3 still only contains the key "bar".
@@ -539,7 +539,7 @@ START HERE
       // but with a different value than in map2.
 
       VMap<String, Integer> map5 = map4.put("foo", 4);
-      // map0 is still emtpy.
+      // map0 is still empty.
       // map1 still only contains the key "foo".
       // map2 still contains the keys "foo" and "bar".
       // map3 still only contains the key "bar".

@@ -24,11 +24,12 @@ class InternalMap<K, V> {
      */
     enum PutAction { NONE, ADDED_ENTRY, ADDED_VALUE };
 
-    //private static final float LOAD_FACTOR_LIMIT = 0.75f;
+    private static final float LOAD_FACTOR_LIMIT = 0.75f;
     static final int INITIAL_BUCKET_COUNT = 11;
 
     private VMapEntry<K, V>[] buckets;
     private int entryCount;
+    private int rehashCount;
 
     /**
      * Creates an InternalMap with the default initial capacity.
@@ -86,27 +87,79 @@ class InternalMap<K, V> {
     /**
      * Dumps the contents of this map to stdout
      * in a form that is useful for debugging.
+     * @param detail true to include content; false for only high-level
      */
-    final synchronized public void dump() {
+    final synchronized void dump(boolean includeContent) {
+        dumpStats();
+        if (!includeContent) return;
+
         if (buckets == null) {
             System.out.println("  empty");
-            return;
+        } else {
+            for (int i = 0; i < buckets.length; i++) {
+                if (buckets[i] != null) dumpBucket(i);
+            }
         }
+    }
+
+    /**
+     * Dumps statistics about a given bucket to stdout for debugging.
+     */
+    final synchronized void dumpBucket(int bucketIndex) {
+        VMapEntry<K, V> entry = buckets[bucketIndex];
+        System.out.println("bucket " + bucketIndex);
+        if (entry == null) {
+            System.out.println("  empty");
+        } else {
+            while (entry != null) {
+                System.out.println(entry);
+                entry = entry.next;
+            }
+        }
+    }
+
+    /**
+     * Dumps statistics about this map to stdout for debugging.
+     */
+    final synchronized void dumpStats() {
+        int emptyBucketCount = 0;
+        int maxEntryListLength = 0;
+        int maxValueListLength = 0;
+        K maxValueListKey = null;
 
         for (int i = 0; i < buckets.length; i++) {
-            if (buckets[i] == null) continue;
-
-            System.out.println("bucket " + i);
             VMapEntry<K, V> entry = buckets[i];
+
             if (entry == null) {
-                System.out.println("  empty");
+                emptyBucketCount++;
             } else {
-                while (entry != null) {
-                    System.out.println(entry);
+                int entryListLength = 0;
+
+                do {
+                    entryListLength++;
+
+                    int valueListLength = entry.getValueListLength();
+                    if (valueListLength > maxValueListLength) {
+                        maxValueListLength = valueListLength;
+                        maxValueListKey = entry.key;
+                    }
+
                     entry = entry.next;
+                } while (entry != null);
+
+                if (entryListLength > maxEntryListLength) {
+                    maxEntryListLength = entryListLength;
                 }
             }
         }
+
+        System.out.println("bucket count: " + buckets.length);
+        System.out.println("empty bucket count: " + emptyBucketCount);
+        System.out.println("entry count:" + entryCount);
+        System.out.println("max entry list length: " + maxEntryListLength);
+        System.out.println("max value list length: " + maxValueListLength);
+        System.out.println("max value list key: " + maxValueListKey);
+        System.out.println("rehash count: " + rehashCount);
     }
 
     /**
@@ -157,8 +210,6 @@ class InternalMap<K, V> {
     private VMapEntry<K, V> getEntry(int bucketIndex, K key) {
         VMapEntry<K, V> entry = buckets[bucketIndex];
         while (entry != null) {
-            // TODO: Is it faster to only compare keys?
-            //if (entry.hashCode == hashCode && entry.key.equals(key)) {
             if (entry.key.equals(key)) return entry;
             entry = entry.next;
         }
@@ -236,10 +287,10 @@ class InternalMap<K, V> {
 
             entryCount++;
 
-            // The performance test for VHashSet does worse using load factor.
-            //float loadFactor = ((float) size) / buckets.length;
-            //if (loadFactor > LOAD_FACTOR_LIMIT) rehash();
-            if (entryCount > buckets.length) rehash();
+            // TODO: Is performance better when using load factor?
+            float loadFactor = ((float) entryCount) / buckets.length;
+            if (loadFactor > LOAD_FACTOR_LIMIT) rehash();
+            //if (entryCount > buckets.length) rehash();
 
             putAction = PutAction.ADDED_ENTRY;
         } else {
@@ -315,6 +366,8 @@ class InternalMap<K, V> {
         }
 
         buckets = newBuckets; // Previous buckets will be GCed.
+
+        rehashCount++;
     }
 
     /**

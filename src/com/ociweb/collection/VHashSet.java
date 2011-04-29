@@ -102,10 +102,11 @@ public class VHashSet<V> implements VSet<V> {
 
     // Javadoc comes from the VSet interface.
     @Override
-    public final synchronized void dump(String name) {
-        System.out.println("<<< start of VHashSet dump for " + name);
+    public final synchronized void dump(String name, boolean includeContent) {
+        System.out.println("\n<<< start of VHashSet dump for " + name);
+        System.out.println("size = " + size());
         System.out.println(this);
-        set.dump();
+        set.dump(includeContent);
         System.out.println(">>> end of VHashSet dump for " + name + '\n');
     }
 

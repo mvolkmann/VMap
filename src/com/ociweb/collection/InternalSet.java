@@ -10,11 +10,12 @@ import java.util.Iterator;
  */
 class InternalSet<V> {
 
-    //private static final float LOAD_FACTOR_LIMIT = 0.75f;
+    private static final float LOAD_FACTOR_LIMIT = 0.75f;
     static final int INITIAL_BUCKET_COUNT = 11;
 
     private VSetEntry<V>[] buckets;
     private int entryCount;
+    private int rehashCount;
 
     /**
      * Creates an InternalSet with the default initial capacity.
@@ -61,10 +62,10 @@ class InternalSet<V> {
 
             entryCount++;
 
-            // The performance test for VHashSet does worse using load factor.
-            //float loadFactor = ((float) size) / buckets.length;
-            //if (loadFactor > LOAD_FACTOR_LIMIT) rehash();
-            if (entryCount > buckets.length) rehash();
+            // TODO: Is performance better when using load factor?
+            float loadFactor = ((float) entryCount) / buckets.length;
+            if (loadFactor > LOAD_FACTOR_LIMIT) rehash();
+            //if (entryCount > buckets.length) rehash();
         } else {
             // An entry was found for the value.
 
@@ -134,27 +135,77 @@ class InternalSet<V> {
     /**
      * Dumps the contents of this set to stdout
      * in a form that is useful for debugging.
+     * @param detail true to include content; false for only high-level
      */
-    final synchronized void dump() {
+    final synchronized void dump(boolean includeContent) {
+        dumpStats();
+        if (!includeContent) return;
+
         if (buckets == null) {
             System.out.println("  empty");
-            return;
+        } else {
+            for (int i = 0; i < buckets.length; i++) {
+                if (buckets[i] != null) dumpBucket(i);
+            }
         }
+    }
+
+    /**
+     * Dumps statistics about a given bucket to stdout for debugging.
+     */
+    final synchronized void dumpBucket(int bucketIndex) {
+        VSetEntry<V> entry = buckets[bucketIndex];
+        System.out.println("bucket " + bucketIndex);
+        if (entry == null) {
+            System.out.println("  empty");
+        } else {
+            while (entry != null) {
+                System.out.println(entry);
+                entry = entry.next;
+            }
+        }
+    }
+
+    /**
+     * Dumps statistics about this set to stdout for debugging.
+     */
+    final synchronized void dumpStats() {
+        int emptyBucketCount = 0;
+        int maxEntryListLength = 0;
+        int maxValueListLength = 0;
 
         for (int i = 0; i < buckets.length; i++) {
-            if (buckets[i] == null) continue;
+            VSetEntry entry = buckets[i];
 
-            System.out.println("bucket " + i);
-            VSetEntry<V> entry = buckets[i];
             if (entry == null) {
-                System.out.println("  empty");
+                emptyBucketCount++;
             } else {
-                while (entry != null) {
-                    System.out.println(entry);
+                int entryListLength = 0;
+
+                do {
+                    entryListLength++;
+
+                    int valueListLength = entry.getValueListLength();
+                    if (valueListLength > maxValueListLength) {
+                        maxValueListLength = valueListLength;
+                    }
+
                     entry = entry.next;
+                } while (entry != null);
+
+                if (entryListLength > maxEntryListLength) {
+                    maxEntryListLength = entryListLength;
+                    //dumpBucket(i);
                 }
             }
         }
+
+        System.out.println("bucket count: " + buckets.length);
+        System.out.println("empty bucket count: " + emptyBucketCount);
+        System.out.println("entry count:" + entryCount);
+        System.out.println("max entry list length: " + maxEntryListLength);
+        System.out.println("max value list length: " + maxValueListLength);
+        System.out.println("rehash count: " + rehashCount);
     }
 
     /**
@@ -194,8 +245,6 @@ class InternalSet<V> {
     private VSetEntry<V> getEntry(int bucketIndex, V value) {
         VSetEntry<V> entry = buckets[bucketIndex];
         while (entry != null) {
-            // TODO: Is it faster to only compare keys?
-            //if (entry.hashCode == hashCode && entry.key.equals(value)) {
             if (entry.value.equals(value)) return entry;
             entry = entry.next;
         }
@@ -284,6 +333,8 @@ class InternalSet<V> {
         }
 
         buckets = newBuckets; // Previous buckets will be GCed.
+
+        rehashCount++;
     }
 
     /**

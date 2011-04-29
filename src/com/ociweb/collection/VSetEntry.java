@@ -60,6 +60,22 @@ class VSetEntry<V> {
     }
 
     /**
+     * Gets the number of stored values for this entry.
+     * @return the number of stored values
+     */
+    int getValueListLength() {
+        int length = 0;
+
+        VersionMember vm = firstVM;
+        while (vm != null) {
+            length++;
+            vm = vm.next;
+        }
+
+        return length;
+    }
+
+    /**
      * Gets the VersionMember object for a given version in this entry.
      * @param version the Version
      * @return the VersionMember or null if not found

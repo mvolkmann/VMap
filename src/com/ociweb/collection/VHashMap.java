@@ -86,10 +86,11 @@ public class VHashMap<K, V> implements VMap<K, V> {
 
     // Javadoc comes from the VMap interface.
     @Override
-    public final synchronized void dump(String name) {
-        System.out.println("<<< start of VHashMap dump of " + name);
+    public final synchronized void dump(String name, boolean includeContent) {
+        System.out.println("\n<<< start of VHashMap dump of " + name);
+        System.out.println("size = " + size());
         System.out.println(this);
-        map.dump();
+        map.dump(includeContent);
         System.out.println(">>> end of VHashMap dump of " + name + '\n');
     }
 
